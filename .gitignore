@@ -1,0 +1,42 @@
+**/__pycache__/
+
+# VS Code #
+*code-workspace
+
+# Shell scripts #
+*.sh
+
+# Ignore lock files
+*lock*
+.zattrs
+.zgroup
+
+# Ignore pickle files
+*.pkl
+
+# Geocache #
+utils/.api_key*
+
+# Ignore some data directories and big files
+data/bayesian_analysis
+data/land_sea_mask
+data/beach_litter/emodnet
+data/economic/aquaculture/**
+data/physical/**
+data/physical/river/lebreton2017
+data/physical/river/meijer2021
+data/**/*.zarr
+data/**/*.nc
+data/**/*.zip
+data/economic/exports/eumofa/*
+data/economic/first_sales/*
+data/economic/production/Aquaculture_2023.1.1/**
+data/economic/production/Capture_2023.1.1/**
+
+
+
+
+archive
+figs
+presentation
+
