@@ -205,14 +205,14 @@ for idx, (beach_id, lat, lon) in additional_beach_latlons.iterrows():
 # -----------------------------------------------------------------------------
 remarks = ospar["Survey: Remarks [999]"].dropna()
 try:
-    remarks.to_csv("data/ospar/remarks.csv", mode="x")
+    remarks.to_csv("data/beach_litter/ospar/remarks.csv", mode="x")
 except FileExistsError:
     pass
 
 # %%
 # Remove surveys that were flagged based on remarks
 # -----------------------------------------------------------------------------
-remarks = pd.read_csv("data/ospar/remarks.csv")
+remarks = pd.read_csv("data/beach_litter/ospar/remarks.csv")
 remarks = remarks.set_index("Survey ID")["Treatment"]
 remove_surveys = remarks.loc[remarks == "remove"].index
 ospar = ospar.drop(remove_surveys)
@@ -306,7 +306,7 @@ ospar_meta = ospar.copy(deep=True)
 ospar_meta.drop(categories_ospar, axis=1, inplace=True)
 
 # Dictionary to convert from OSPAR to Científicos de la Basura (CB) categories
-path_dictionary = "data/ospar/OSPAR_meta_litter_categories.xlsx"
+path_dictionary = "data/beach_litter/ospar/OSPAR_meta_litter_categories.xlsx"
 ospar2meta = pd.read_excel(path_dictionary)
 
 ospar2meta = ospar2meta.drop(["CB", "Comments"], axis=1, inplace=False)
@@ -322,7 +322,7 @@ ospar_cb = ospar.copy(deep=True)
 ospar_cb.drop(categories_ospar, axis=1, inplace=True)
 
 # Dictionary to convert from OSPAR to Científicos de la Basura (CB) categories
-path_dictionary = "data/ospar/OSPAR&CB_litter_categories.xlsx"
+path_dictionary = "data/beach_litter/ospar/OSPAR&CB_litter_categories.xlsx"
 ospar2chile = pd.read_excel(path_dictionary, names=["OSPAR", "CB", "Comments"])
 categories_cb = ospar2chile["CB"].dropna().unique()
 # Do not use category "Other" which is inconsistent in CB
@@ -365,6 +365,7 @@ da_ospar_meta = da_ospar_meta[
         "Med",
         "Faeces",
         "MICRO",
+        "Aquaculture",
     ]
 ]
 da_ospar_meta = da_ospar_meta.rename(
@@ -431,6 +432,7 @@ ospar_df = ospar_df[
         "SUP",
         "CB",
         "LOCAL",
+        "Aquaculture",
     ]
 ]
 # NOTE: skipna=True is not yet implemented in pandas
