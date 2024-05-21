@@ -11,7 +11,7 @@ from utils.definitions import nea_mask
 # %%
 # Load data
 # =============================================================================
-path = "data/aquaculture/mariculture/all_marine_aquaculture_farms_sources_final.csv"
+path = "data/economic/aquaculture/mariculture/all_marine_aquaculture_farms_sources_final.csv"
 mari = pd.read_csv(path)
 is_nea = mari.X.between(-15, 15) & mari.Y.between(35, 65)
 mari = mari.loc[is_nea]

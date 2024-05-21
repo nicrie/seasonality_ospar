@@ -74,9 +74,9 @@ cv_sales = sales.std("month") / sales.mean("month")
 cv_sales.name = "coefficient_of_variation"
 
 # River discharge
-river_discharge = xr.open_dataarray("data/river/efas_river_discharge.nc")
+river_discharge = xr.open_dataarray("data/physical/river/efas_river_discharge.nc")
 river_discharge = river_discharge.assign_coords(
-    x=river_discharge.x, y=river_discharge.y
+    x=river_discharge.x, y=river_discharge.ys
 )
 total_discharge = river_discharge.sum("month")
 river_rel = river_discharge / total_discharge
@@ -84,12 +84,12 @@ cv_river = river_discharge.std("month") / river_discharge.mean("month")
 cv_river.name = "coefficient_of_variation"
 
 # Plastic emissions
-plastic = xr.open_dataarray("data/river/strokal2023_efas_v5_weights.nc")
+plastic = xr.open_dataarray("data/physical/river/strokal2023_efas_v5_weights.nc")
 cv_plastic = plastic.std("month") / plastic.mean("month")
 
 
 # Fishing (World Fishing Watch) - Wild Capture
-fish_wild = xr.open_dataarray("data/fishing/wild_capture_fishing_intensity.nc")
+fish_wild = xr.open_dataarray("data/economic/fishing/wild_capture_fishing_intensity.nc")
 fish_wild = fish_wild.coarsen(lon=8, lat=8, boundary="trim").sum()
 fish_wild = fish_wild.groupby("time.month").mean()
 cv_fish_wild = fish_wild.std("month") / fish_wild.mean("month")
@@ -98,7 +98,7 @@ cv_fish_wild.name = "coefficient_of_variation"
 
 # %%
 # Aquaculture
-mariculture = xr.open_dataset("data/aquaculture/mariculture_seasonality.nc")
+mariculture = xr.open_dataset("data/economic/aquaculture/mariculture_seasonality.nc")
 mariculture = mariculture.to_array("forcing")
 cv_mariculture = mariculture.std("month") / mariculture.mean("month")
 
