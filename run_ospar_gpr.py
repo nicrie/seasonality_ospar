@@ -27,14 +27,14 @@ numpyro.set_host_device_count(4)
 print("Loading data...")
 
 SEASON = ["DJF", "MAM", "JJA", "SON"]
-RANDOM_SEED = 2803 + 1
-VARIABLE = "Plastic"
-YEAR = 2001
+RANDOM_SEED = 2803 + 2
+VARIABLE = "Aquaculture"
+YEAR = 2016
 
 
 rng = np.random.default_rng(RANDOM_SEED)
 
-ospar = dt.open_datatree("data/ospar/preprocessed.zarr", engine="zarr")
+ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
 ospar = ospar["preprocessed"].to_dataset()
 ospar = ospar.sel(year=slice(YEAR, 2020))
 ospar = ospar[VARIABLE]
@@ -205,7 +205,7 @@ def fit_gp_model(season, fit=True):
         # Sample from the GP conditional distributionç
         ppc = pm.sample_posterior_predictive(
             idata.posterior,
-            var_names=["mu_trans_pred", "mu_pred", "phi_pred", "Plastic_pred"],
+            var_names=["mu_trans_pred", "mu_pred", "phi_pred", VARIABLE + "_pred"],
             random_seed=rng,
         )
         idata.extend(ppc)
@@ -242,7 +242,7 @@ for season in idata.keys():
             "mu_trans_pred": "mu_trans",
             "mu_pred": "mu",
             "phi_pred": "phi",
-            "Plastic_pred": "Plastic",
+            VARIABLE + "_pred": VARIABLE,
         }
     )
     model_output[season] = pp
