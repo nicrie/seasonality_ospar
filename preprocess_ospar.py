@@ -126,7 +126,7 @@ def theil_sen_regression(X, dim):
 # %%
 # Load OSPAR
 # =============================================================================
-base_path = "data/ospar/single"
+base_path = "data/beach_litter/ospar/single"
 filepaths = [f for f in os.listdir(base_path) if f.endswith(".csv")]
 filepaths = [os.path.join(base_path, fp) for fp in filepaths]
 
