@@ -25,7 +25,7 @@ aqua = read_data("Aquaculture")
 
 sources = open_datatree("data/litter_sources.zarr", engine="zarr")
 species = np.unique(sources.fishing.first_sales.species)
-ospar = open_datatree("data/ospar/preprocessed.zarr", engine="zarr")
+ospar = open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
 countries = np.unique(ospar["preprocessed"].country).tolist()
 
 code_countries = code_countries.loc[code_countries["Name_En"].isin(countries)]
@@ -705,9 +705,6 @@ fish.attrs["units"] = "tonnes"
 
 # %%
 # lead perprocessed OSPAR data
-
-
-ospar = open_datatree("data/ospar/preprocessed.zarr", engine="zarr")
 n_surveys = ospar.preprocessed["Plastic"].notnull().sum(("season"))
 n_surveys = n_surveys.groupby("country").sum()
 
