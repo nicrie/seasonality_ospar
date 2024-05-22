@@ -18,7 +18,7 @@ mariculture = mariculture.coarsen(lon=20, lat=20, boundary="trim").mean()
 
 
 # Oceanic wave energy (extreme weather, oceanic)
-wave_energy = xr.open_dataset("data/wave_height/wave_climatology.nc")
+wave_energy = xr.open_dataset("data/physical/wave_height/wave_climatology.nc")
 wave_energy = wave_energy["wave_energy"]
 
 wave_energy = xr.Dataset(
@@ -26,7 +26,7 @@ wave_energy = xr.Dataset(
 )
 
 # River discharge (extreme weather; continental)
-river_discharge = xr.open_dataset("data/river/efas_v5_discharge.nc")
+river_discharge = xr.open_dataset("data/physical/river/efas_v5_discharge.nc")
 river_discharge = river_discharge.rename({"latitude": "lat", "longitude": "lon"})
 river_discharge = river_discharge.sortby("lat")
 river_discharge = river_discharge.rename({"mean": "monthly_mean"})
