@@ -17,7 +17,8 @@
         "Med",
         "Faeces",
         "MICRO",
-        "Aquaculture"
+        "Aquaculture",
+        "Non-Aqua"
     ],
     "ospar_meta_special": [
         "TA",

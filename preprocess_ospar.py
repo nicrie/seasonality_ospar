@@ -366,6 +366,7 @@ da_ospar_meta = da_ospar_meta[
         "Faeces",
         "MICRO",
         "Aquaculture",
+        "Non-Aqua",
     ]
 ]
 da_ospar_meta = da_ospar_meta.rename(
@@ -399,9 +400,6 @@ da_ospar_meta["LOCAL"] = (
 )
 
 # %%
-# write
-
-# %%
 # How many measurement per beach, season and year?
 # -----------------------------------------------------------------------------
 n_surveys = ospar_meta.groupby(["year", "season", "Beach ID"]).size()
@@ -433,6 +431,7 @@ ospar_df = ospar_df[
         "CB",
         "LOCAL",
         "Aquaculture",
+        "Non-Aqua",
     ]
 ]
 # NOTE: skipna=True is not yet implemented in pandas
