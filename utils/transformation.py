@@ -7,7 +7,12 @@ import xarray as xr
 def _np_yeojohnson(arr):
     arr = arr.flatten()
     arr = arr[~np.isnan(arr)]
-    return st.yeojohnson_normmax(arr)
+    lmbda = st.yeojohnson_normmax(arr)
+    if lmbda < 0:
+        print("Warning: Yeo-Johnson lambda < 0, using log transformation instead.")
+        return 0
+    else:
+        return lmbda
 
 
 def estimate_lmbda(da, dim: list[str]):
@@ -37,16 +42,28 @@ def estimate_lmbda(da, dim: list[str]):
 
 
 def yeojohnson(da, lmbda):
-    return ((da + 1) ** lmbda - 1) / lmbda
+    if lmbda == 0:
+        return np.log(da + 1)
+    else:
+        return ((da + 1) ** lmbda - 1) / lmbda
 
 
 def yeojohnson_inv(da, lmbda):
-    return (da * lmbda + 1) ** (1 / lmbda) - 1
+    if lmbda == 0:
+        return np.exp(da) - 1
+    else:
+        return (da * lmbda + 1) ** (1 / lmbda) - 1
 
 
 def pt_yeojohnson(da, lmbda):
-    return (pt.pow(da + 1, lmbda) - 1) / lmbda
+    if lmbda == 0:
+        return pt.log(da + 1)
+    else:
+        return (pt.pow(da + 1, lmbda) - 1) / lmbda
 
 
 def pt_yeojohnson_inv(da, lmbda):
-    return pt.pow(da * lmbda + 1, 1 / lmbda) - 1
+    if lmbda == 0:
+        return pt.exp(da) - 1
+    else:
+        return pt.pow(da * lmbda + 1, 1 / lmbda) - 1
