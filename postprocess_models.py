@@ -202,7 +202,7 @@ YEAR = 2001
 
 base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
 fig_path = f"figs/gpr/evaluation/{VARIABLE}/{YEAR}/"
-ospar = dt.open_datatree("data/ospar/preprocessed.zarr", engine="zarr")
+ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
 litter_o = ospar["preprocessed"].to_dataset()
 litter_o = litter_o[VARIABLE]
 litter_o = litter_o.sel(year=slice(YEAR, 2020)).dropna("beach_id", **{"how": "all"})
