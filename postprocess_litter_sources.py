@@ -76,7 +76,7 @@ cv_sales.name = "coefficient_of_variation"
 # River discharge
 river_discharge = xr.open_dataarray("data/physical/river/efas_river_discharge.nc")
 river_discharge = river_discharge.assign_coords(
-    x=river_discharge.x, y=river_discharge.ys
+    x=river_discharge.x, y=river_discharge.y
 )
 total_discharge = river_discharge.sum("month")
 river_rel = river_discharge / total_discharge
