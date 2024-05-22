@@ -22,12 +22,12 @@ numpyro.set_host_device_count(4)
 # =============================================================================
 SEASON = ["DJF", "MAM", "JJA", "SON"]
 RANDOM_SEED = 2803 + 1
-VARIABLE = "Plastic"
-YEAR = 2001
+VARIABLE = "Aquaculture"
+YEAR = 2016
 
 rng = np.random.default_rng(RANDOM_SEED)
 
-ospar = dt.open_datatree("data/ospar/preprocessed.zarr", engine="zarr")
+ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
 ospar = ospar["preprocessed"].to_dataset()
 ospar = ospar.sel(year=slice(YEAR, 2020))
 ospar = ospar[VARIABLE]
@@ -53,11 +53,14 @@ beaches = data.beach_id.values
 # Set up GP model
 # =============================================================================
 # Set up priors
+mean_lower, mean_upper = ospar.mean("year").quantile([0.025, 0.975])
+mean_lower = mean_lower.item()
+mean_upper = mean_upper.item()
 params_mu_mu = pm.find_constrained_prior(
     distribution=pm.Normal,
-    lower=yeojohnson(14, lmbda),
-    upper=yeojohnson(2343, lmbda),
-    init_guess={"mu": yeojohnson(250, lmbda), "sigma": yeojohnson(100, lmbda)},
+    lower=yeojohnson(mean_lower, lmbda),
+    upper=yeojohnson(mean_upper, lmbda),
+    init_guess={"mu": yeojohnson(10, lmbda), "sigma": yeojohnson(100, lmbda)},
 )
 # Covariance function
 params_rho1 = pm.find_constrained_prior(
@@ -98,15 +101,14 @@ mu_eval = pm.draw(mu_mu, 10)
 K = cov_func(beach_lonlats).eval()
 mvn = pm.MvNormal.dist(mu=mu_mu, cov=K)
 # mvn = pm.MvNormal.dist(mu=len(beaches) * [5], cov=K)
-samples = pm.draw(mvn, 3)
-yeojohnson(ospar, lmbda).mean("year").sel(season="MAM").plot.scatter(
-    x="beach_id", zorder=5, color="C1"
+samples = pm.draw(mvn, 50)
+ax = plt.axes()
+yeojohnson(ospar, lmbda).mean("year").sel(season="DJF").plot.scatter(
+    x="beach_id", zorder=5, color="C1", ax=ax
 )
-plt.plot(np.arange(beaches.size), samples.T, "C0", alpha=0.5)
-plt.ylim(0, 10)
+ax.plot(np.arange(ospar.beach_id.size), samples.T, "C0", alpha=0.1)
+ax.set_ylim(-2, 10)
 plt.show()
 
-
-#
 
 # %%
