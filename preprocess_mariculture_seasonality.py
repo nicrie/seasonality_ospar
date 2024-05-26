@@ -14,7 +14,11 @@ from utils.definitions import nea_mask
 # =============================================================================
 # Farm density
 mariculture = xr.open_dataarray("data/economic/aquaculture/aquaculture_farm_density.nc")
-mariculture = mariculture.coarsen(lon=20, lat=20, boundary="trim").mean()
+# mariculture = mariculture.coarsen(lon=20, lat=20, boundary="trim").mean()
+mariculture_all = mariculture.sum("species_group").expand_dims(
+    {"species_group": ["all"]}
+)
+mariculture = xr.concat([mariculture, mariculture_all], "species_group")
 
 
 # Oceanic wave energy (extreme weather, oceanic)
@@ -36,9 +40,7 @@ river_discharge["annual_mean"] = river_discharge["monthly_mean"].mean("month").f
 exports = xr.open_dataset("data/economic/exports/exports_nea_countries.nc")
 production = xr.open_dataset("data/economic/production/fao_fish_production.nc")
 
-# production_commodity_group = production["average_live_weight"].sel(production_type="aqua").groupby("commodity_group").sum()
 production_weights = production["average_live_weight"].sel(production_type="aqua")
-production_weights = production_weights.where(production_weights > 500)
 
 
 def convert_species_groups(da):
@@ -93,24 +95,37 @@ has_valid_seasonality = exports_normalized.notnull().all("month")
 # Consider weights only for species/countries that have seasonality
 production_weights = production_weights.where(has_valid_seasonality)
 
-ref = production_weights.groupby("species_group").sum()
+production_weights_group = production_weights.copy()
+ref = production_weights_group.groupby("species_group").sum()
 species2group = {
     sp: com
     for sp, com in zip(
-        production_weights.species.values, production_weights.species_group.values
+        production_weights_group.species.values,
+        production_weights_group.species_group.values,
     )
 }
-for species in production_weights.species.values:
+for species in production_weights_group.species.values:
     norm_value = ref.loc[{"species_group": species2group[species]}]
-    production_weights.loc[{"species": species}] = (
-        production_weights.loc[{"species": species}] / norm_value
+    production_weights_group.loc[{"species": species}] = (
+        production_weights_group.loc[{"species": species}] / norm_value
     )
 
 
 # Group the exports by species group
-exports_scaled = exports_normalized * production_weights
+exports_scaled = exports_normalized * production_weights_group
 exports_species_group = exports_scaled.groupby("species_group").sum()
 
+
+# Now do the same for all species, without considering the species group
+production_weights_all_species = production_weights.copy()
+production_weights_all_species = (
+    production_weights_all_species / production_weights_all_species.sum("species")
+)
+exports_scaled_all = exports_normalized * production_weights_all_species
+exports_all = exports_scaled_all.sum("species")
+exports_all = exports_all.expand_dims({"species_group": ["all"]})
+
+exports_species_group = xr.concat([exports_species_group, exports_all], "species_group")
 
 # %%
 
@@ -214,7 +229,5 @@ seasonal_weights["exports"] = mariculture_exports
 seasonal_weights = seasonal_weights.drop(["step", "surface"])
 # %%
 seasonal_weights.to_netcdf("data/economic/aquaculture/mariculture_seasonality.nc")
-
-# %%
 
 # %%
