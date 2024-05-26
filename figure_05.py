@@ -2,19 +2,22 @@
 from string import ascii_uppercase as ABC
 
 import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import PIL
+import regionmask
 import seaborn as sns
 import xarray as xr
 from datatree import open_datatree
+from matplotlib import colormaps
 from matplotlib.gridspec import GridSpec
+from matplotlib.patches import Polygon
 
 import utils.styles
-from utils.definitions import nea_mask
 
 utils.styles.set_theme()
 
@@ -93,8 +96,10 @@ plastic_stacked["mean_emission"] = plastic_stacked["emissions"].mean("month")
 
 
 # Fishing (capture)
+from utils.definitions import nea_ocean_basins
+
 fishing_capture = sources["fishing/capture"].to_dataset()
-fishing_capture = fishing_capture.where(nea_mask.mask(fishing_capture).notnull())
+# fishing_capture = fishing_capture.where(nea_mask.mask(fishing_capture).notnull())
 fishing_capture["size"] = fishing_capture.intensity.mean("month")
 
 fish_capture_cl1 = (
@@ -119,9 +124,15 @@ fish_capture_cl2 = fish_capture_cl2.reset_index()
 
 # %%
 # Aquaculture
-mari = sources["mariculture"].sel(species_group="Bivalve molluscs")
-mari = mari.stack(point=["lat", "lon"]).dropna("point")
+mari = sources["mariculture"].sel(forcing="exports", species_group="all").to_dataset()
 
+country_mask = regionmask.defined_regions.natural_earth.countries_50.mask_3D(
+    mari["seasonal_potential"]
+)
+mari_mean_country = mari["seasonal_potential"].where(country_mask).mean(["lat", "lon"])
+
+# mari = mari.coarsen({"lon": 4, "lat": 4}, boundary="trim").sum()
+mari = mari.stack(point=["lat", "lon"]).dropna("point")
 
 # Icons
 icons = {
@@ -140,7 +151,7 @@ def trans_wild(x):
 
 
 def trans_mari(x):
-    return x ** (1) * 3000
+    return x ** (1) * 10
 
 
 def trans_discharge(x):
@@ -153,10 +164,10 @@ def trans_plastic(x):
 
 cmap = {"river": "mako", "plastic": "mako", "mari": "mako", "wild": "mako"}
 norm = {
-    "river": mcolors.Normalize(vmin=0, vmax=1),
-    "plastic": mcolors.Normalize(vmin=0.0, vmax=1),
-    "mari": mcolors.Normalize(vmin=0, vmax=1),
-    "wild": mcolors.Normalize(vmin=0, vmax=1),
+    "river": mcolors.Normalize(vmin=0, vmax=0.5),
+    "plastic": mcolors.Normalize(vmin=0.0, vmax=0.5),
+    "mari": mcolors.Normalize(vmin=0, vmax=0.5),
+    "wild": mcolors.Normalize(vmin=0, vmax=0.5),
 }
 
 proj = ccrs.TransverseMercator(central_longitude=0.0, central_latitude=50.0)
@@ -200,10 +211,10 @@ for i, (a, d) in enumerate(zip(ax, ABC)):
     a.set_extent(extent, crs=ccrs.PlateCarree())
     # set background black
     a.set_facecolor("black")
-    # a.add_feature(OCEAN.with_scale("50m"), color="k")
+    a.add_feature(cfeature.LAND.with_scale("50m"), color="k", zorder=1)
     # a.add_feature(LAND.with_scale("50m"), color="k")
     # a.add_feature(RIVERS.with_scale("50m"), color=".4", lw=0.2)
-    a.coastlines("50m", color=".5", lw=0.3)
+    a.coastlines("50m", color=".5", lw=0.2)
     a.text(0.99, 0.98, f"({d})", transform=a.transAxes, ha="right", va="top", color="w")
 
 # Add source icons
@@ -232,10 +243,10 @@ for a in [ax[0], ax[2], ax[4]]:
     a.scatter(
         litter_cl1.lon,
         litter_cl1.lat,
-        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.55),
+        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.60),
         color="None",
         ec="#ea60ff",
-        lw=0.6,
+        lw=0.75,
         zorder=500,
         transform=ccrs.PlateCarree(),
     )
@@ -243,10 +254,10 @@ for a in [ax[1], ax[3], ax[5]]:
     a.scatter(
         litter_cl2.lon,
         litter_cl2.lat,
-        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.55),
+        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.60),
         color="None",
         ec="#ea60ff",
-        lw=0.5,
+        lw=0.75,
         zorder=500,
         transform=ccrs.PlateCarree(),
     )
@@ -298,54 +309,147 @@ ax[1].scatter(
     transform=ccrs.PlateCarree(),
     zorder=40,
 )
-
 # Fishing  (capture)
-ax[2].scatter(
-    fish_capture_cl1.lon,
-    fish_capture_cl1.lat,
-    s=trans_wild(fish_capture_cl1["size"]),
-    c=fish_capture_cl1.seasonal_potential,
-    norm=norm["wild"],
-    ec="None",
-    lw=0.3,
-    cmap=cmap["wild"],
-    transform=ccrs.PlateCarree(),
-)
-ax[3].scatter(
-    fish_capture_cl2.lon,
-    fish_capture_cl2.lat,
-    s=trans_wild(fish_capture_cl2["size"]),
-    c=fish_capture_cl2.seasonal_potential,
-    norm=norm["wild"],
-    ec="None",
-    lw=0.3,
-    cmap=cmap["wild"],
-    transform=ccrs.PlateCarree(),
-)
+
+
+for region in nea_ocean_basins:
+    for a, clstr in zip([ax[2], ax[3]], [1, 2]):
+        val = (
+            fishing_capture["seasonal_potential"]
+            .sel(cluster=clstr, region=region.number)
+            .item()
+        )
+        color = colormaps[cmap["wild"]](norm["wild"](val))
+        # Define the coordinates of the polygon vertices
+        polygon_coords = list(
+            zip(*nea_ocean_basins[[region.number]].polygons[0].exterior.xy)
+        )
+        # Create a Polygon object
+        polygon = Polygon(
+            polygon_coords,
+            closed=True,
+            lw=0.5,
+            ls=":",
+            facecolor=color,
+            edgecolor="white",
+            transform=ccrs.PlateCarree(),
+            zorder=0,
+        )
+
+        # Add the polygon to the plot
+        centroid = polygon.xy.mean(0)
+        a.add_patch(polygon)
+        # Add region number as label in center of polygon
+        a.annotate(
+            f"{region.number}",
+            xy=centroid,
+            xytext=centroid,
+            ha="center",
+            va="center",
+            fontsize=6,
+            color="white",
+            zorder=1000,
+            bbox=dict(facecolor="black", edgecolor="none", alpha=0.7, pad=0.5),
+            transform=ccrs.PlateCarree(),
+        )
+
+# ax[2].scatter(
+#     fish_capture_cl1.lon,
+#     fish_capture_cl1.lat,
+#     s=trans_wild(fish_capture_cl1["size"]),
+#     c=fish_capture_cl1.seasonal_potential,
+#     norm=norm["wild"],
+#     ec="None",
+#     lw=0.3,
+#     cmap=cmap["wild"],
+#     transform=ccrs.PlateCarree(),
+# )
+# ax[3].scatter(
+#     fish_capture_cl2.lon,
+#     fish_capture_cl2.lat,
+#     s=trans_wild(fish_capture_cl2["size"]),
+#     c=fish_capture_cl2.seasonal_potential,
+#     norm=norm["wild"],
+#     ec="None",
+#     lw=0.3,
+#     cmap=cmap["wild"],
+#     transform=ccrs.PlateCarree(),
+# )
 
 # Aquaculture
 ax[4].scatter(
     mari.lon,
     mari.lat,
-    s=trans_mari(mari["size"].sum("month").sel(forcing="exports")),
-    c=mari["seasonal_potential"].sel(forcing="exports").sel(cluster=1),
+    s=trans_mari(mari["size"]),
+    c=mari["seasonal_potential"].sel(cluster=1),
     norm=norm["mari"],
+    cmap=cmap["mari"],
     ec="none",
     lw=0.3,
-    cmap=cmap["mari"],
     transform=ccrs.PlateCarree(),
+    alpha=0.3,
+    zorder=40,
 )
 ax[5].scatter(
     mari.lon,
     mari.lat,
-    s=trans_mari(mari["size"].sum("month").sel(forcing="exports")),
-    c=mari["seasonal_potential"].sel(forcing="exports").sel(cluster=2),
+    s=trans_mari(mari["size"]),
+    # c="orange",
+    c=mari["seasonal_potential"].sel(cluster=2),
     norm=norm["mari"],
+    cmap=cmap["mari"],
     ec="none",
     lw=0.3,
-    cmap=cmap["mari"],
     transform=ccrs.PlateCarree(),
+    alpha=0.3,
+    zorder=40,
 )
+
+
+# Add country borders
+# shpfilename = shpreader.natural_earth(
+#     resolution="50m", category="cultural", name="admin_0_countries"
+# )
+# reader = shpreader.Reader(shpfilename)
+# countries = reader.records()
+# country_names = [
+#     "France",
+#     "Portugal",
+#     "Spain",
+#     "Ireland",
+#     "United Kingdom",
+#     "Netherlands",
+#     "Germany",
+#     "Denmark",
+#     "Sweden",
+#     "Norway",
+# ]
+
+
+# def value2color(v):
+#     return colormaps[cmap["mari"]](norm["mari"](v))
+
+
+# for country in countries:
+#     country_name = country.attributes["NAME"]
+#     for cluster, a in zip([1, 2], [ax[4], ax[5]]):
+#         try:
+#             col_val = (
+#                 mari_mean_country.set_index({"region": "names"})
+#                 .sel(cluster=cluster, region=country_name)
+#                 .item()
+#             )
+#             color = value2color(col_val)
+#         except KeyError:
+#             color = "k"
+
+#         a.add_geometries(
+#             country.geometry,
+#             ccrs.PlateCarree(),
+#             edgecolor="#888888",
+#             facecolor=color,
+#             linewidth=0.3,
+#         )
 
 
 # Add legends

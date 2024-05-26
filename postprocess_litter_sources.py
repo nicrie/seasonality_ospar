@@ -3,12 +3,18 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+# %%
 import seaborn as sns
 import xarray as xr
 from datatree import DataTree
+
+# Define the coordinates for the 9 regions based on the provided image
+# These coordinates are approximate and should be adjusted as necessary
 from sklearn.cluster import HDBSCAN
 
 
+# %%
 def monthly2seasonal(da, dim):
     """Convert any DataArray with monthly time dimension to seasonal sum.
 
@@ -74,14 +80,21 @@ cv_sales = sales.std("month") / sales.mean("month")
 cv_sales.name = "coefficient_of_variation"
 
 # River discharge
-river_discharge = xr.open_dataarray("data/physical/river/efas_river_discharge.nc")
-river_discharge = river_discharge.assign_coords(
-    x=river_discharge.x, y=river_discharge.y
+river_discharge_v5 = xr.open_dataset("data/physical/river/efas_v5_discharge.nc")["mean"]
+river_discharge_v5 = river_discharge_v5.rename({"latitude": "lat", "longitude": "lon"})
+
+river_discharge_v4 = xr.open_dataarray("data/physical/river/efas_river_discharge.nc")
+river_discharge_v4 = river_discharge_v4.assign_coords(
+    x=river_discharge_v4.x, y=river_discharge_v4.y
 )
-total_discharge = river_discharge.sum("month")
-river_rel = river_discharge / total_discharge
-cv_river = river_discharge.std("month") / river_discharge.mean("month")
-cv_river.name = "coefficient_of_variation"
+
+total_discharge_v4 = river_discharge_v4.sum("month")
+cv_river_v4 = river_discharge_v4.std("month") / river_discharge_v4.mean("month")
+cv_river_v4.name = "coefficient_of_variation"
+
+total_discharge_v5 = river_discharge_v5.sum("month")
+cv_river_v5 = river_discharge_v5.std("month") / river_discharge_v5.mean("month")
+cv_river_v5.name = "coefficient_of_variation"
 
 # Plastic emissions
 plastic = xr.open_dataarray("data/physical/river/strokal2023_efas_v5_weights.nc")
@@ -89,12 +102,30 @@ cv_plastic = plastic.std("month") / plastic.mean("month")
 
 
 # Fishing (World Fishing Watch) - Wild Capture
+from utils.definitions import nea_ocean_basins
+
 fish_wild = xr.open_dataarray("data/economic/fishing/wild_capture_fishing_intensity.nc")
-fish_wild = fish_wild.coarsen(lon=8, lat=8, boundary="trim").sum()
+fish_wild = fish_wild.resample(time="1ME").sum()
+
+# Compute fish stats for meta regions
+fish_wild_region = fish_wild.where(nea_ocean_basins.mask_3D(fish_wild)).sum(
+    ("lat", "lon")
+)
+
+fish_wild_region = fish_wild_region.assign_coords(
+    year=fish_wild_region.time.dt.year, month=fish_wild_region.time.dt.month
+)
+fish_wild_region = fish_wild_region.set_index(time=["year", "month"]).unstack()
+
+fish_region = fish_wild_region.mean("year")
+fish_region_std = fish_wild_region.std("year")
+cv_fish_region = fish_region.std("month") / fish_region.mean("month")
+cv_fish_region.name = "coefficient_of_variation"
+
+
 fish_wild = fish_wild.groupby("time.month").mean()
 cv_fish_wild = fish_wild.std("month") / fish_wild.mean("month")
-fish_wild_total_effort = fish_wild.sum("month")
-cv_fish_wild.name = "coefficient_of_variation"
+
 
 # %%
 # Aquaculture
@@ -104,37 +135,65 @@ cv_mariculture = mariculture.std("month") / mariculture.mean("month")
 
 
 # %%
-fishing_sales = xr.Dataset({"quantity": sales, "cv": cv_sales})
-river = xr.Dataset({"discharge": river_discharge, "cv": cv_river})
-plastic = xr.Dataset({"emissions": plastic, "cv": cv_plastic})
+fishing_sales = xr.Dataset(
+    {"climatology": sales, "size": sales.sum("month"), "cv": cv_sales}
+)
+river = xr.Dataset(
+    {
+        "climatology": river_discharge_v4,
+        "size": river_discharge_v4.sum("month"),
+        "cv": cv_river_v4,
+    }
+)
+river_v5 = xr.Dataset(
+    {
+        "climatology": river_discharge_v5,
+        "size": river_discharge_v5.sum("month"),
+        "cv": cv_river_v5,
+    }
+)
+plastic = xr.Dataset(
+    {"climatology": plastic, "size": plastic.sum("month"), "cv": cv_plastic}
+)
 fishing = xr.Dataset(
-    {"intensity": fish_wild, "cv": cv_fish_wild},
+    {"climatology": fish_wild, "size": fish_wild.sum("month"), "cv": cv_fish_wild},
     attrs=dict(
         description="Wild capture fishing intensity in average hours per month per 0.5ºx0.5º"
     ),
 )
-mari = xr.Dataset({"size": mariculture, "cv": cv_mariculture})
+fishing_region = xr.Dataset(
+    {"climatology": fish_region, "size": fish_region.sum("month"), "cv": cv_fish_region}
+)
+mari = xr.Dataset(
+    {"climatology": mariculture, "size": mariculture.sum("month"), "cv": cv_mariculture}
+)
 
 
 # %%
 # Compute seasonal similarity between beach litter clusters and sources
 # =============================================================================
 def seasonal_potential(r, cv):
+    # While correlation is normed, the coefficient of variation
+    # does not reflect the same scale for all variables;
+    # Specifically, variations of fish exports doesn't have to follow the same relative variations
+    # as the aquaculture production ==> normalize the CVs
     quntl = 0.95
-    sp = r * cv
     try:
-        norm_vals = sp.quantile(quntl, ["lat", "lon", "cluster"])
+        norm_vals = cv.quantile(quntl, ["lat", "lon"])
     except ValueError:
         try:
-            norm_vals = sp.quantile(quntl, ["y", "x", "cluster"])
+            norm_vals = cv.quantile(quntl, ["y", "x"])
         except ValueError:
-            norm_vals = sp.quantile(quntl, ["location", "cluster"])
-
-    return sp / norm_vals
+            try:
+                norm_vals = cv.quantile(quntl, ["location"])
+            except ValueError:
+                norm_vals = cv.quantile(quntl, ["region"])
+    cv = cv / norm_vals
+    return r * cv
 
 
 # River discharge
-river_seasonal = monthly2seasonal(river.discharge.roll(month=1), "month")
+river_seasonal = monthly2seasonal(river.climatology.roll(month=1), "month")
 r_river = xr.corr(beach_litter, river_seasonal, dim="season")
 r_river.name = "pearson_correlation"
 r_river.attrs["description"] = (
@@ -143,8 +202,18 @@ r_river.attrs["description"] = (
 river["correlation"] = r_river
 river["seasonal_potential"] = seasonal_potential(river.correlation, river.cv)
 
+# River discharge v5
+river_v5_seasonal = monthly2seasonal(river_v5.climatology.roll(month=1), "month")
+r_river_v5 = xr.corr(beach_litter, river_v5_seasonal, dim="season")
+r_river_v5.name = "pearson_correlation"
+r_river_v5.attrs["description"] = (
+    "Correlation coefficient between beach litter clusters and river_v5 discharge"
+)
+river_v5["correlation"] = r_river_v5
+river_v5["seasonal_potential"] = seasonal_potential(river_v5.correlation, river_v5.cv)
+
 # Riverine plastic emissions
-plastic_seasonal = monthly2seasonal(plastic.emissions.roll(month=1), "month")
+plastic_seasonal = monthly2seasonal(plastic.climatology.roll(month=1), "month")
 r_plastic = xr.corr(beach_litter, plastic_seasonal, dim="season")
 r_plastic.name = "pearson_correlation"
 r_plastic.attrs["description"] = (
@@ -154,7 +223,7 @@ plastic["correlation"] = r_plastic
 plastic["seasonal_potential"] = seasonal_potential(plastic.correlation, plastic.cv)
 
 # Fishing (capture)
-fish_seasonal = monthly2seasonal(fishing.intensity.roll(month=1), "month")
+fish_seasonal = monthly2seasonal(fishing.climatology.roll(month=1), "month")
 r_fish = xr.corr(beach_litter, fish_seasonal, dim="season")
 r_fish.name = "pearson_correlation"
 r_fish.attrs["description"] = (
@@ -163,8 +232,23 @@ r_fish.attrs["description"] = (
 fishing["correlation"] = r_fish
 fishing["seasonal_potential"] = seasonal_potential(fishing.correlation, fishing.cv)
 
+# Fishing (capture, regional)
+fish_region_seasonal = monthly2seasonal(
+    fishing_region.climatology.roll(month=1), "month"
+)
+r_fish_region = xr.corr(beach_litter, fish_region_seasonal, dim="season")
+r_fish_region.name = "pearson_correlation"
+r_fish_region.attrs["description"] = (
+    "Correlation coefficient between beach litter clusters and regional wild capture fishing intensity"
+)
+fishing_region["correlation"] = r_fish_region
+fishing_region["seasonal_potential"] = seasonal_potential(
+    fishing_region.correlation, fishing_region.cv
+)
+
+
 # Fishing (first sales)
-sales_seasonal = monthly2seasonal(fishing_sales.quantity.roll(month=1), "month")
+sales_seasonal = monthly2seasonal(fishing_sales.climatology.roll(month=1), "month")
 r_fishing = xr.corr(beach_litter, sales_seasonal, dim="season")
 r_fishing.name = "pearson_correlation"
 r_fishing.attrs["description"] = (
@@ -177,7 +261,7 @@ fishing_sales["seasonal_potential"] = seasonal_potential(
 
 
 # Aquaculture (wave height, farm density)
-mari_seasonal = monthly2seasonal(mari["size"].roll(month=1), "month")
+mari_seasonal = monthly2seasonal(mari.climatology.roll(month=1), "month")
 r_mari = xr.corr(beach_litter, mari_seasonal, dim="season")
 r_mari.name = "pearson_correlation"
 r_mari.attrs["description"] = (
@@ -192,7 +276,7 @@ mari["seasonal_potential"] = seasonal_potential(mari.correlation, mari.cv)
 # =============================================================================
 is_valid = fishing_sales.seasonal_potential > 0
 
-sales_relevant = fishing_sales.quantity.where(is_valid)
+sales_relevant = fishing_sales.climatology.where(is_valid)
 data_sum = sales_relevant.sum("species")
 fish_sales_cv = data_sum.std("month") / data_sum.mean("month")
 fish_sales_cv.name = "coefficient_of_variation"
@@ -204,7 +288,8 @@ fish_sales_seasonal_potential.name = "seasonal_potential"
 
 fish_sales_relevant_species = xr.Dataset(
     {
-        "sales": sales_relevant,
+        "climatology": sales_relevant,
+        "size": sales_relevant.sum("month"),
         "cv": fish_sales_cv,
         "correlation": fish_sales_corr,
         "seasonal_potential": fish_sales_seasonal_potential,
@@ -213,11 +298,24 @@ fish_sales_relevant_species = xr.Dataset(
 )
 
 # %%
+# Save some storage by removing the climatology
+river = river.drop_vars("climatology")
+river_v5 = river_v5.drop_vars("climatology")
+plastic = plastic.drop_vars("climatology")
+fishing = fishing.drop_vars("climatology")
+fishing_region = fishing_region.drop_vars("climatology")
+fishing_sales = fishing_sales.drop_vars("climatology")
+fish_sales_relevant_species = fish_sales_relevant_species.drop_vars("climatology")
+mari = mari.drop_vars("climatology")
+
+# %%
 sources = DataTree.from_dict(
     {
         "river/discharge": river,
+        "river/discharge_v5": river_v5,
         "river/plastic": plastic,
         "fishing/capture": fishing,
+        "fishing/capture/region": fishing_region,
         "fishing/first_sales": fishing_sales,
         "fishing/first_sales/relevant_species": fish_sales_relevant_species,
         "mariculture": mari,
