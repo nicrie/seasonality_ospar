@@ -1,4 +1,6 @@
 # %%
+import os
+
 import arviz as az
 import datatree as dt
 import matplotlib.pyplot as plt
@@ -18,6 +20,9 @@ YEAR = 2001
 
 base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
 fig_path = f"figs/gpr/evaluation/{VARIABLE}/{YEAR}/"
+
+os.makedirs(fig_path, exist_ok=True)
+
 # %%
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
 litter_o = ospar["preprocessed"].to_dataset()
@@ -140,7 +145,7 @@ axes["phi"].set_title(r"g) Dispersion | $\phi$", loc="left")
 # Priors
 prior_mu_mu = yeojohnson_inv(prior.mu_mu, lmbda)
 kwargs = {"clip": [0, None], "color": ".5", "fill": True}
-kwargs1 = {"clip": [0, 1000], "color": ".5", "fill": True}
+kwargs1 = {"clip": [0, None], "color": ".5", "fill": True}
 sns.kdeplot(data=prior_mu_mu, ax=axes["mu_mu"], label="Prior", **kwargs1)
 sns.kdeplot(data=prior.phi, ax=axes["phi"], label="Prior", **kwargs)
 sns.kdeplot(data=prior.eta_1, ax=axes["eta_1"], **kwargs)
@@ -167,7 +172,7 @@ for i, (season, id) in enumerate(idata.items()):
     sns.kdeplot(post.rho_1, ax=axes["rho_1"], **kwargs)
     sns.kdeplot(post.rho_2, ax=axes["rho_2"], **kwargs)
 
-axes["mu_mu"].set_xlim(0, 1000)
+axes["mu_mu"].set_xlim(0, 5)
 axes["phi"].set_xlim(0, 8)
 axes["eta_1"].set_xlim(0, 2)
 axes["eta_2"].set_xlim(0, 2)
