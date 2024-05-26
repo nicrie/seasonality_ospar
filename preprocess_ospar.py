@@ -366,6 +366,7 @@ da_ospar_meta = da_ospar_meta[
         "Faeces",
         "MICRO",
         "Aquaculture",
+        "String",
         "Non-Aqua",
     ]
 ]
@@ -431,6 +432,7 @@ ospar_df = ospar_df[
         "CB",
         "LOCAL",
         "Aquaculture",
+        "String",
         "Non-Aqua",
     ]
 ]
@@ -547,6 +549,3 @@ ospar_datatree = dt.DataTree.from_dict(
     }
 )
 ospar_datatree.to_zarr("data/beach_litter/ospar/preprocessed.zarr", mode="w")
-
-
-# %%
