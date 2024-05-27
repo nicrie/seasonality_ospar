@@ -80,27 +80,25 @@ sources = open_datatree("data/litter_sources.zarr", engine="zarr")
 
 # Rivers
 river = sources["river/discharge"].to_dataset()
-thrs_discharge = river.discharge.mean("month").quantile(0.05)
-river = river.where(river.discharge.mean("month") > thrs_discharge)
+thrs_discharge = river["size"].quantile(0.05)
+river = river.where(river["size"] > thrs_discharge)
 river_stacked = river.stack(point=["y", "x"]).dropna("point")
 
 river = river_stacked.seasonal_potential
-river_mean_discharge = river_stacked.discharge.mean("month")
 river_cl1 = river.sel(cluster=1, drop=True)
 river_cl2 = river.sel(cluster=2, drop=True)
 
 # Riverine plastic emissions (Strokal et al., 2023)
 plastic = sources["river/plastic"].to_dataset()
 plastic_stacked = plastic.stack(point=["lat", "lon"]).dropna("point")
-plastic_stacked["mean_emission"] = plastic_stacked["emissions"].mean("month")
+plastic_stacked["mean_emission"] = plastic_stacked["size"]
 
 
 # Fishing (capture)
 from utils.definitions import nea_ocean_basins
 
-fishing_capture = sources["fishing/capture"].to_dataset()
+fishing_capture = sources["fishing/capture/region"].to_dataset()
 # fishing_capture = fishing_capture.where(nea_mask.mask(fishing_capture).notnull())
-fishing_capture["size"] = fishing_capture.intensity.mean("month")
 
 fish_capture_cl1 = (
     fishing_capture[["size", "seasonal_potential"]]
@@ -124,7 +122,11 @@ fish_capture_cl2 = fish_capture_cl2.reset_index()
 
 # %%
 # Aquaculture
-mari = sources["mariculture"].sel(forcing="exports", species_group="all").to_dataset()
+mari = (
+    sources["mariculture"]
+    .sel(forcing="exports", species_group="Bivalve molluscs")
+    .to_dataset()
+)
 
 country_mask = regionmask.defined_regions.natural_earth.countries_50.mask_3D(
     mari["seasonal_potential"]
@@ -155,19 +157,19 @@ def trans_mari(x):
 
 
 def trans_discharge(x):
-    return x ** (1.7) * 1e-6 * 12
+    return x ** (1.7) * 1e-7
 
 
 def trans_plastic(x):
-    return x ** (0.8) * 1e-2
+    return x ** (0.8) * 2e-3
 
 
 cmap = {"river": "mako", "plastic": "mako", "mari": "mako", "wild": "mako"}
 norm = {
-    "river": mcolors.Normalize(vmin=0, vmax=0.5),
-    "plastic": mcolors.Normalize(vmin=0.0, vmax=0.5),
-    "mari": mcolors.Normalize(vmin=0, vmax=0.5),
-    "wild": mcolors.Normalize(vmin=0, vmax=0.5),
+    "river": mcolors.Normalize(vmin=0, vmax=1),
+    "plastic": mcolors.Normalize(vmin=0.0, vmax=1),
+    "mari": mcolors.Normalize(vmin=0, vmax=1),
+    "wild": mcolors.Normalize(vmin=0, vmax=1),
 }
 
 proj = ccrs.TransverseMercator(central_longitude=0.0, central_latitude=50.0)
@@ -263,7 +265,7 @@ for a in [ax[1], ax[3], ax[5]]:
     )
 
 # River discharge
-s_river = trans_discharge(river_stacked.discharge.mean("month"))
+s_river = trans_discharge(river_stacked["size"])
 ax[0].scatter(
     river_cl1.lon,
     river_cl1.lat,
@@ -284,7 +286,7 @@ ax[1].scatter(
 )
 
 # Riverine macroplastic emission
-s_plastic = trans_plastic(plastic_stacked.mean_emission)
+s_plastic = trans_plastic(plastic_stacked["size"])
 ax[0].scatter(
     plastic_stacked.lon,
     plastic_stacked.lat,
@@ -590,7 +592,7 @@ title = "Production areas\n[$n/900km^2$]"
 add_legend_circles(ax[5], 0.65, 0.01, 0.3, 0.2, sizes, labels, trans_mari, title=title)
 
 
-# plt.savefig("figs/figure05.png", dpi=300, bbox_inches="tight")
+# plt.savefig("figs/figure05.pdf", bbox_inches="tight")
 plt.show()
 
 # %%
