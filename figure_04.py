@@ -24,7 +24,7 @@ base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
 
 # OSPAR data
 # -----------------------------------------------------------------------------
-ospar = dt.open_datatree("data/ospar/preprocessed.zarr", engine="zarr")
+ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
 litter_o = ospar["preprocessed"].to_dataset()
 litter_o = litter_o[VARIABLE]
 litter_o = litter_o.sel(year=slice(YEAR, 2020)).dropna("beach_id", **{"how": "all"})
@@ -328,7 +328,7 @@ with plt.style.context(grey_style):
         )
         sns.despine(fig, trim=True, offset=5, bottom=True, left=True)
         ax2.set_yticklabels([])
-        plt.savefig("figs/figure04.png", dpi=300, bbox_inches="tight")
+        plt.savefig("figs/figure04.png", dpi=500, bbox_inches="tight")
         plt.show()
 
 # %%
