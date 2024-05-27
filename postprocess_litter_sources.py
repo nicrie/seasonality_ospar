@@ -3,8 +3,6 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-# %%
 import seaborn as sns
 import xarray as xr
 from datatree import DataTree
@@ -12,6 +10,8 @@ from datatree import DataTree
 # Define the coordinates for the 9 regions based on the provided image
 # These coordinates are approximate and should be adjusted as necessary
 from sklearn.cluster import HDBSCAN
+
+from utils.definitions import nea_ocean_basins
 
 
 # %%
@@ -102,8 +102,6 @@ cv_plastic = plastic.std("month") / plastic.mean("month")
 
 
 # Fishing (World Fishing Watch) - Wild Capture
-from utils.definitions import nea_ocean_basins
-
 fish_wild = xr.open_dataarray("data/economic/fishing/wild_capture_fishing_intensity.nc")
 fish_wild = fish_wild.resample(time="1ME").sum()
 
@@ -141,19 +139,19 @@ fishing_sales = xr.Dataset(
 river = xr.Dataset(
     {
         "climatology": river_discharge_v4,
-        "size": river_discharge_v4.sum("month"),
+        "size": river_discharge_v4.mean("month"),
         "cv": cv_river_v4,
     }
 )
 river_v5 = xr.Dataset(
     {
         "climatology": river_discharge_v5,
-        "size": river_discharge_v5.sum("month"),
+        "size": river_discharge_v5.mean("month"),
         "cv": cv_river_v5,
     }
 )
 plastic = xr.Dataset(
-    {"climatology": plastic, "size": plastic.sum("month"), "cv": cv_plastic}
+    {"climatology": plastic, "size": plastic.mean("month"), "cv": cv_plastic}
 )
 fishing = xr.Dataset(
     {"climatology": fish_wild, "size": fish_wild.sum("month"), "cv": cv_fish_wild},
@@ -165,7 +163,11 @@ fishing_region = xr.Dataset(
     {"climatology": fish_region, "size": fish_region.sum("month"), "cv": cv_fish_region}
 )
 mari = xr.Dataset(
-    {"climatology": mariculture, "size": mariculture.sum("month"), "cv": cv_mariculture}
+    {
+        "climatology": mariculture,
+        "size": mariculture.mean("month"),
+        "cv": cv_mariculture,
+    }
 )
 
 
@@ -188,7 +190,7 @@ def seasonal_potential(r, cv):
                 norm_vals = cv.quantile(quntl, ["location"])
             except ValueError:
                 norm_vals = cv.quantile(quntl, ["region"])
-    cv = cv / norm_vals
+    # cv = cv / norm_vals
     return r * cv
 
 
