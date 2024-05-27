@@ -14,7 +14,8 @@ from utils.definitions import nea_mask
 # =============================================================================
 # Farm density
 mariculture = xr.open_dataarray("data/economic/aquaculture/aquaculture_farm_density.nc")
-# mariculture = mariculture.coarsen(lon=20, lat=20, boundary="trim").mean()
+mariculture = mariculture.coarsen(lon=20, lat=20, boundary="trim").sum()
+mariculture.attrs["units"] = "production areas / 60 km coastline"
 mariculture_all = mariculture.sum("species_group").expand_dims(
     {"species_group": ["all"]}
 )
@@ -126,6 +127,11 @@ exports_all = exports_scaled_all.sum("species")
 exports_all = exports_all.expand_dims({"species_group": ["all"]})
 
 exports_species_group = xr.concat([exports_species_group, exports_all], "species_group")
+
+# Summing up the exports over all months yields 100 % of total weighted exports
+# We want the mean over all months to be 1 to make it comparable to the other weights
+# Therefore, we divide by the mean of the exports over all months
+exports_species_group = exports_species_group / exports_species_group.mean("month")
 
 # %%
 
