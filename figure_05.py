@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import PIL
-import regionmask
 import seaborn as sns
 import xarray as xr
 from datatree import open_datatree
@@ -18,6 +17,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Polygon
 
 import utils.styles
+from utils.definitions import nea_ocean_basins
 
 utils.styles.set_theme()
 
@@ -95,8 +95,6 @@ plastic_stacked["mean_emission"] = plastic_stacked["size"]
 
 
 # Fishing (capture)
-from utils.definitions import nea_ocean_basins
-
 fishing_capture = sources["fishing/capture/region"].to_dataset()
 # fishing_capture = fishing_capture.where(nea_mask.mask(fishing_capture).notnull())
 
@@ -122,18 +120,7 @@ fish_capture_cl2 = fish_capture_cl2.reset_index()
 
 # %%
 # Aquaculture
-mari = (
-    sources["mariculture"]
-    .sel(forcing="exports", species_group="Bivalve molluscs")
-    .to_dataset()
-)
-
-country_mask = regionmask.defined_regions.natural_earth.countries_50.mask_3D(
-    mari["seasonal_potential"]
-)
-mari_mean_country = mari["seasonal_potential"].where(country_mask).mean(["lat", "lon"])
-
-# mari = mari.coarsen({"lon": 4, "lat": 4}, boundary="trim").sum()
+mari = sources["mariculture"].sel(forcing="exports", species_group="all").to_dataset()
 mari = mari.stack(point=["lat", "lon"]).dropna("point")
 
 # Icons
@@ -153,23 +140,34 @@ def trans_wild(x):
 
 
 def trans_mari(x):
-    return x ** (1) * 10
+    return x ** (1) * 20
+
+
+def trans_mari_bivalve(x):
+    return x ** (1) * 5
 
 
 def trans_discharge(x):
-    return x ** (1.7) * 1e-7
+    return x ** (1.5) * 6e-6
 
 
 def trans_plastic(x):
-    return x ** (0.8) * 2e-3
+    return x ** (0.8) * 1e-2
 
 
-cmap = {"river": "mako", "plastic": "mako", "mari": "mako", "wild": "mako"}
+cmap = {
+    "river": "mako",
+    "plastic": "mako",
+    "mari": "mako",
+    "wild": "mako",
+    "wild_size": "inferno",
+}
 norm = {
-    "river": mcolors.Normalize(vmin=0, vmax=1),
-    "plastic": mcolors.Normalize(vmin=0.0, vmax=1),
-    "mari": mcolors.Normalize(vmin=0, vmax=1),
-    "wild": mcolors.Normalize(vmin=0, vmax=1),
+    "river": mcolors.Normalize(vmin=0, vmax=0.6),
+    "plastic": mcolors.Normalize(vmin=0.0, vmax=0.6),
+    "mari": mcolors.Normalize(vmin=0, vmax=0.6),
+    "wild": mcolors.Normalize(vmin=0, vmax=0.6),
+    "wild_size": mcolors.Normalize(vmin=0, vmax=1e6),
 }
 
 proj = ccrs.TransverseMercator(central_longitude=0.0, central_latitude=50.0)
@@ -311,17 +309,23 @@ ax[1].scatter(
     transform=ccrs.PlateCarree(),
     zorder=40,
 )
+
+
 # Fishing  (capture)
-
-
 for region in nea_ocean_basins:
     for a, clstr in zip([ax[2], ax[3]], [1, 2]):
-        val = (
+        # Get size and seasonal potential for each region/cluster
+        val_sp = (
             fishing_capture["seasonal_potential"]
             .sel(cluster=clstr, region=region.number)
             .item()
         )
-        color = colormaps[cmap["wild"]](norm["wild"](val))
+        val_size = fishing_capture["size"].sel(region=region.number).item()
+
+        # Convert values to colors
+        fc = colormaps[cmap["wild"]](norm["wild"](val_sp))
+        ec = colormaps[cmap["wild_size"]](norm["wild_size"](val_size))
+
         # Define the coordinates of the polygon vertices
         polygon_coords = list(
             zip(*nea_ocean_basins[[region.number]].polygons[0].exterior.xy)
@@ -330,10 +334,10 @@ for region in nea_ocean_basins:
         polygon = Polygon(
             polygon_coords,
             closed=True,
-            lw=0.5,
-            ls=":",
-            facecolor=color,
-            edgecolor="white",
+            lw=1.5,
+            ls="-",
+            facecolor=fc,
+            edgecolor=ec,
             transform=ccrs.PlateCarree(),
             zorder=0,
         )
@@ -389,8 +393,8 @@ ax[4].scatter(
     ec="none",
     lw=0.3,
     transform=ccrs.PlateCarree(),
-    alpha=0.3,
-    zorder=40,
+    alpha=0.7,
+    zorder=0,
 )
 ax[5].scatter(
     mari.lon,
@@ -401,57 +405,11 @@ ax[5].scatter(
     norm=norm["mari"],
     cmap=cmap["mari"],
     ec="none",
-    lw=0.3,
+    lw=0.2,
     transform=ccrs.PlateCarree(),
-    alpha=0.3,
-    zorder=40,
+    alpha=0.7,
+    zorder=0,
 )
-
-
-# Add country borders
-# shpfilename = shpreader.natural_earth(
-#     resolution="50m", category="cultural", name="admin_0_countries"
-# )
-# reader = shpreader.Reader(shpfilename)
-# countries = reader.records()
-# country_names = [
-#     "France",
-#     "Portugal",
-#     "Spain",
-#     "Ireland",
-#     "United Kingdom",
-#     "Netherlands",
-#     "Germany",
-#     "Denmark",
-#     "Sweden",
-#     "Norway",
-# ]
-
-
-# def value2color(v):
-#     return colormaps[cmap["mari"]](norm["mari"](v))
-
-
-# for country in countries:
-#     country_name = country.attributes["NAME"]
-#     for cluster, a in zip([1, 2], [ax[4], ax[5]]):
-#         try:
-#             col_val = (
-#                 mari_mean_country.set_index({"region": "names"})
-#                 .sel(cluster=cluster, region=country_name)
-#                 .item()
-#             )
-#             color = value2color(col_val)
-#         except KeyError:
-#             color = "k"
-
-#         a.add_geometries(
-#             country.geometry,
-#             ccrs.PlateCarree(),
-#             edgecolor="#888888",
-#             facecolor=color,
-#             linewidth=0.3,
-#         )
 
 
 # Add legends
@@ -471,7 +429,12 @@ def add_legend_background(ax, x, y, dx, dy):
     )
 
 
-def add_seasonal_potential_colorbar(ax, x, y, dx, dy, cmap, norm, ticks, title):
+def add_seasonal_potential_colorbar(
+    ax, x, y, dx, dy, cmap, norm, ticks, title, ticklabels=None
+):
+    if ticklabels is None:
+        ticklabels = ticks
+
     cax = ax.inset_axes([x, y, dx, dy], zorder=55)
     cbar = fig.colorbar(
         mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
@@ -479,6 +442,7 @@ def add_seasonal_potential_colorbar(ax, x, y, dx, dy, cmap, norm, ticks, title):
         orientation="horizontal",
     )
     cbar.set_ticks(ticks)
+    cbar.set_ticklabels(ticklabels)
     cbar.set_label(title, color="white", size=6)  # colorbar title
     cax.tick_params(axis="x", colors="white", labelsize=6, width=0.5)
     cax.xaxis.set_label_position("top")  # Move cbar title to the top
@@ -500,7 +464,7 @@ add_seasonal_potential_colorbar(
     0.03,
     cmap["river"],
     norm["river"],
-    [0, 0.5, 1],
+    [0, 0.3, 0.6],
     "Seasonal potential",
 )
 add_seasonal_potential_colorbar(
@@ -511,8 +475,20 @@ add_seasonal_potential_colorbar(
     0.03,
     cmap["wild"],
     norm["wild"],
-    [0, 0.5, 1],
+    [0, 0.3, 0.6],
     "Seasonal potential",
+)
+add_seasonal_potential_colorbar(
+    ax[3],
+    0.65,
+    0.1,
+    0.3,
+    0.03,
+    cmap["wild_size"],
+    norm["wild_size"],
+    [0, 500000, 1000000],
+    "Fishing intensity\n[$10^6$ hrs/yr]",
+    ["0", "0.5", "1"],
 )
 add_seasonal_potential_colorbar(
     ax[5],
@@ -522,7 +498,7 @@ add_seasonal_potential_colorbar(
     0.03,
     cmap["mari"],
     norm["mari"],
-    [0, 0.5, 1],
+    [0, 0.3, 0.6],
     "Seasonal potential",
 )
 
@@ -580,19 +556,350 @@ add_legend_circles(
     ax[1], 0.65, 0.01, 0.3, 0.2, sizes, labels, trans_discharge, title=title
 )
 # -> Fishing (capture)
-sizes = np.array([30, 100, 300])
-labels = ["30", "100", "300"]
-title = "Fishing Intensity\n[$hrs/1º x 1º$]"
-add_legend_circles(ax[3], 0.65, 0.01, 0.3, 0.2, sizes, labels, trans_wild, title=title)
+# sizes = np.array([30, 100, 300])
+# labels = ["30", "100", "300"]
+# title = "Fishing Intensity\n[$hrs/1º x 1º$]"
+# add_legend_circles(ax[3], 0.65, 0.01, 0.3, 0.2, sizes, labels, trans_wild, title=title)
 
 # -> Aquaculture (farm density)
-sizes = np.array([1, 3, 10])
-labels = ["1", "3", "10"]
-title = "Production areas\n[$n/900km^2$]"
+sizes = np.array([1, 3, 9])
+labels = ["1", "3", "9"]
+title = "Production areas\n[$60km^{-1}$ coastline]"
 add_legend_circles(ax[5], 0.65, 0.01, 0.3, 0.2, sizes, labels, trans_mari, title=title)
 
 
-# plt.savefig("figs/figure05.pdf", bbox_inches="tight")
+plt.savefig("figs/figure05.png", dpi=500, bbox_inches="tight")
+plt.show()
+
+# %%
+# Figures showing alternative hypotheses for mariculture
+# =============================================================================
+# Aquaculture
+mari_scoures = sources["mariculture"].to_dataset()
+
+
+X_LABELS = ["Beach Litter\nCluster 1", "Beach Litter\nCluster 2"]
+Y_LABELS = [
+    "Mariculture | Exports",
+    "Mariculture | Ocean wave energy",
+    "Mariculture | River discharge",
+]
+
+# %%
+fig = plt.figure(figsize=(7.2, 9.72), dpi=300)
+gs = GridSpec(3, 2, figure=fig, height_ratios=[1, 1, 1], wspace=0, hspace=0)
+ax = [fig.add_subplot(gs[i, j], projection=proj) for i in range(3) for j in range(2)]
+axes_first_col = [ax[0], ax[2], ax[4]]
+axes_second_col = [ax[1], ax[3], ax[5]]
+axes_first_row = [ax[0], ax[1]]
+# Add titles
+for a, lb in zip(axes_first_row, X_LABELS):
+    a.text(
+        0.5,
+        0.98,
+        lb,
+        transform=a.transAxes,
+        ha="center",
+        va="top",
+        color="w",
+    )
+for a, lb in zip(axes_first_col, Y_LABELS):
+    a.text(
+        0.02,
+        0.5,
+        lb,
+        transform=a.transAxes,
+        ha="left",
+        va="center",
+        rotation=90,
+        color="w",
+    )
+
+
+# Set up axes
+for i, (a, d) in enumerate(zip(ax, ABC)):
+    a.set_extent(extent, crs=ccrs.PlateCarree())
+    # set background black
+    a.set_facecolor("black")
+    a.add_feature(cfeature.LAND.with_scale("50m"), color="k", zorder=1)
+    a.coastlines("50m", color=".5", lw=0.2)
+    a.text(0.99, 0.98, f"({d})", transform=a.transAxes, ha="right", va="top", color="w")
+
+# Add source icons
+iax = ax[0].inset_axes([0.0, 0.79, 0.2, 0.2], transform=ax[0].transAxes, zorder=55)
+iax.imshow(images["mari"])
+
+# set background color
+iax.patch.set_facecolor(clr_bg["mari"](0.85))
+iax.patch.set_alpha(1.0)
+# set border color
+iax.patch.set_edgecolor("white")
+iax.set_xticks([])
+iax.set_yticks([])
+
+
+# Scatter plots
+# -----------------------------------------------------------------------------
+# Beach litter
+for a in [ax[0], ax[2], ax[4]]:
+    a.scatter(
+        litter_cl1.lon,
+        litter_cl1.lat,
+        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.60),
+        color="None",
+        ec="#ea60ff",
+        lw=0.75,
+        zorder=500,
+        transform=ccrs.PlateCarree(),
+    )
+for a in [ax[1], ax[3], ax[5]]:
+    a.scatter(
+        litter_cl2.lon,
+        litter_cl2.lat,
+        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.60),
+        color="None",
+        ec="#ea60ff",
+        lw=0.75,
+        zorder=500,
+        transform=ccrs.PlateCarree(),
+    )
+
+# Aquaculture
+forcings = ["exports", "wave", "river"]
+for a, fc in zip([ax[0], ax[2], ax[4]], forcings):
+    mari_sub = mari_scoures.sel(forcing=fc, species_group="all").sel(cluster=1)
+    mari_sub = mari_sub.stack(point=["lat", "lon"]).dropna("point")
+    a.scatter(
+        mari_sub.lon,
+        mari_sub.lat,
+        s=trans_mari(mari_sub["size"]),
+        c=mari_sub["seasonal_potential"],
+        norm=norm["mari"],
+        cmap=cmap["mari"],
+        ec="none",
+        lw=0.3,
+        transform=ccrs.PlateCarree(),
+        alpha=0.7,
+        zorder=0,
+    )
+for a, fc in zip([ax[1], ax[3], ax[5]], forcings):
+    mari_sub = mari_scoures.sel(forcing=fc, species_group="all").sel(cluster=2)
+    mari_sub = mari_sub.stack(point=["lat", "lon"]).dropna("point")
+    a.scatter(
+        mari_sub.lon,
+        mari_sub.lat,
+        s=trans_mari(mari_sub["size"]),
+        c=mari_sub["seasonal_potential"],
+        norm=norm["mari"],
+        cmap=cmap["mari"],
+        ec="none",
+        lw=0.2,
+        transform=ccrs.PlateCarree(),
+        alpha=0.7,
+        zorder=0,
+    )
+
+
+# Add legends
+def add_legend_background(ax, x, y, dx, dy):
+    ax.add_patch(
+        mpl.patches.Rectangle(
+            (x, y),  # bottom left corner coordinates
+            dx,  # width
+            dy,  # height
+            fc="black",
+            ec="white",
+            fill=True,
+            alpha=1,
+            transform=ax.transAxes,
+            zorder=50,
+        )
+    )
+
+
+add_legend_background(ax[5], 0.6, 0.0, 0.4, 0.4)
+
+add_seasonal_potential_colorbar(
+    ax[5],
+    0.65,
+    0.3,
+    0.3,
+    0.03,
+    cmap["mari"],
+    norm["mari"],
+    [0, 0.3, 0.6],
+    "Seasonal potential",
+)
+
+# Add legend circles
+# -> Aquaculture (farm density)
+sizes = np.array([1, 3, 9])
+labels = ["1", "3", "9"]
+title = "Production areas\n[$60km^{-1}$ coastline]"
+add_legend_circles(ax[5], 0.65, 0.01, 0.3, 0.2, sizes, labels, trans_mari, title=title)
+
+plt.savefig("figs/figure_supp05_mariculture_all.png", dpi=500, bbox_inches="tight")
+plt.show()
+# %%
+
+
+fig = plt.figure(figsize=(7.2, 9.72))
+gs = GridSpec(3, 2, figure=fig, height_ratios=[1, 1, 1], wspace=0, hspace=0)
+ax = [fig.add_subplot(gs[i, j], projection=proj) for i in range(3) for j in range(2)]
+axes_first_col = [ax[0], ax[2], ax[4]]
+axes_second_col = [ax[1], ax[3], ax[5]]
+axes_first_row = [ax[0], ax[1]]
+# Add titles
+for a, lb in zip(axes_first_row, X_LABELS):
+    a.text(
+        0.5,
+        0.98,
+        lb,
+        transform=a.transAxes,
+        ha="center",
+        va="top",
+        color="w",
+    )
+for a, lb in zip(axes_first_col, Y_LABELS):
+    a.text(
+        0.02,
+        0.5,
+        lb,
+        transform=a.transAxes,
+        ha="left",
+        va="center",
+        rotation=90,
+        color="w",
+    )
+
+
+# Set up axes
+for i, (a, d) in enumerate(zip(ax, ABC)):
+    a.set_extent(extent, crs=ccrs.PlateCarree())
+    # set background black
+    a.set_facecolor("black")
+    a.add_feature(cfeature.LAND.with_scale("50m"), color="k", zorder=1)
+    a.coastlines("50m", color=".5", lw=0.2)
+    a.text(0.99, 0.98, f"({d})", transform=a.transAxes, ha="right", va="top", color="w")
+
+# Add source icons
+iax = ax[0].inset_axes([0.0, 0.79, 0.2, 0.2], transform=ax[0].transAxes, zorder=55)
+iax.imshow(images["mari"])
+
+# set background color
+iax.patch.set_facecolor(clr_bg["mari"](0.85))
+iax.patch.set_alpha(1.0)
+# set border color
+iax.patch.set_edgecolor("white")
+iax.set_xticks([])
+iax.set_yticks([])
+
+
+# Scatter plots
+# -----------------------------------------------------------------------------
+# Beach litter
+for a in [ax[0], ax[2], ax[4]]:
+    a.scatter(
+        litter_cl1.lon,
+        litter_cl1.lat,
+        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.60),
+        color="None",
+        ec="#ea60ff",
+        lw=0.75,
+        zorder=500,
+        transform=ccrs.PlateCarree(),
+    )
+for a in [ax[1], ax[3], ax[5]]:
+    a.scatter(
+        litter_cl2.lon,
+        litter_cl2.lat,
+        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.60),
+        color="None",
+        ec="#ea60ff",
+        lw=0.75,
+        zorder=500,
+        transform=ccrs.PlateCarree(),
+    )
+
+# Aquaculture
+forcings = ["exports", "wave", "river"]
+for a, fc in zip([ax[0], ax[2], ax[4]], forcings):
+    mari_sub = mari_scoures.sel(forcing=fc, species_group="Bivalve molluscs").sel(
+        cluster=1
+    )
+    mari_sub = mari_sub.stack(point=["lat", "lon"]).dropna("point")
+    a.scatter(
+        mari_sub.lon,
+        mari_sub.lat,
+        s=trans_mari(mari_sub["size"]),
+        c=mari_sub["seasonal_potential"],
+        norm=norm["mari"],
+        cmap=cmap["mari"],
+        ec="none",
+        lw=0.3,
+        transform=ccrs.PlateCarree(),
+        alpha=0.7,
+        zorder=0,
+    )
+for a, fc in zip([ax[1], ax[3], ax[5]], forcings):
+    mari_sub = mari_scoures.sel(forcing=fc, species_group="Bivalve molluscs").sel(
+        cluster=2
+    )
+    mari_sub = mari_sub.stack(point=["lat", "lon"]).dropna("point")
+    a.scatter(
+        mari_sub.lon,
+        mari_sub.lat,
+        s=trans_mari(mari_sub["size"]),
+        c=mari_sub["seasonal_potential"],
+        norm=norm["mari"],
+        cmap=cmap["mari"],
+        ec="none",
+        lw=0.2,
+        transform=ccrs.PlateCarree(),
+        alpha=0.7,
+        zorder=0,
+    )
+
+
+# Add legends
+def add_legend_background(ax, x, y, dx, dy):
+    ax.add_patch(
+        mpl.patches.Rectangle(
+            (x, y),  # bottom left corner coordinates
+            dx,  # width
+            dy,  # height
+            fc="black",
+            ec="white",
+            fill=True,
+            alpha=1,
+            transform=ax.transAxes,
+            zorder=50,
+        )
+    )
+
+
+add_legend_background(ax[5], 0.6, 0.0, 0.4, 0.4)
+
+add_seasonal_potential_colorbar(
+    ax[5],
+    0.65,
+    0.3,
+    0.3,
+    0.03,
+    cmap["mari"],
+    norm["mari"],
+    [0, 0.3, 0.6],
+    "Seasonal potential",
+)
+
+# Add legend circles
+# -> Aquaculture (farm density)
+sizes = np.array([1, 3, 9])
+labels = ["1", "3", "9"]
+title = "Production areas\n[$60km^{-1}$ coastline]"
+add_legend_circles(ax[5], 0.65, 0.01, 0.3, 0.2, sizes, labels, trans_mari, title=title)
+
+plt.savefig("figs/figure_supp05_mariculture_bivalve.png", dpi=500, bbox_inches="tight")
 plt.show()
 
 # %%
