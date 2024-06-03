@@ -365,9 +365,9 @@ da_ospar_meta = da_ospar_meta[
         "Med",
         "Faeces",
         "MICRO",
+        "FISH",
         "Aquaculture",
         "String",
-        "Non-Aqua",
     ]
 ]
 da_ospar_meta = da_ospar_meta.rename(
@@ -431,9 +431,9 @@ ospar_df = ospar_df[
         "SUP",
         "CB",
         "LOCAL",
+        "FISH",
         "Aquaculture",
         "String",
-        "Non-Aqua",
     ]
 ]
 # NOTE: skipna=True is not yet implemented in pandas
@@ -503,6 +503,11 @@ intercept = intercept.where(has_trend, 0)
 
 da_ospar_meta2_detrend = Xc - trends + X_median
 
+# %%
+# Compute composition of items (wrt plastics) per category
+# -----------------------------------------------------------------------------
+composition = da_ospar_meta2[["FISH", "Aquaculture"]] / da_ospar_meta2["Plastic"]
+
 
 # %%
 # Store data
@@ -546,6 +551,9 @@ ospar_datatree = dt.DataTree.from_dict(
         "/category_mapping": da_ospar2meta,
         "/preprocessed/": da_ospar_meta2,
         "/preprocessed/detrended/": da_ospar_meta2_detrend,
+        "/preprocessed/composition/": composition,
     }
 )
 ospar_datatree.to_zarr("data/beach_litter/ospar/preprocessed.zarr", mode="w")
+
+# %%

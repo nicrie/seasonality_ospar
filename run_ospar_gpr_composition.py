@@ -29,12 +29,8 @@ YEAR = 2001
 rng = np.random.default_rng(RANDOM_SEED)
 
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-ospar = ospar["preprocessed"].to_dataset()
-ospar = ospar.sel(year=slice(YEAR, 2020))
-
-composition = ospar / ospar["Plastic"]
-composition["SEA_no_aqua"] = composition["SEA"] - composition["Aquaculture"]
-# composition["Aquaculture"] = 1 * composition["Aquaculture"]
+composition = ospar["preprocessed/composition"].to_dataset()
+composition = composition.sel(year=slice(YEAR, 2020))
 
 is_valid = composition.notnull()
 composition = (
