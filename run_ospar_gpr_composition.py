@@ -79,7 +79,7 @@ def fit_gp_model(season, fit=True):
             distribution=pm.Normal,
             lower=logit(mean_lower),
             upper=logit(mean_upper),
-            init_guess={"mu": 5, "sigma": 2},
+            init_guess={"mu": logit(0.5), "sigma": 1},
         )
         # Covariance function
         params_rho1 = pm.find_constrained_prior(
@@ -97,7 +97,7 @@ def fit_gp_model(season, fit=True):
         params_eta = pm.find_constrained_prior(
             distribution=pm.Gamma,
             lower=0.5 / np.sqrt(2),
-            upper=1.5 / np.sqrt(2),
+            upper=3 / np.sqrt(2),
             init_guess={"alpha": 10, "beta": 10},
         )
         params_sigma = pm.find_constrained_prior(
