@@ -285,8 +285,8 @@ print("OSPAR data set contains {} entries".format(n_entries))
 # specifically, exclude islands - the Azores and Greenland
 # -----------------------------------------------------------------------------
 # Focus on continental Europe + UK
-# ospar = ospar[ospar.lon > -15]
-# ospar = ospar[ospar.lat < 65]
+ospar = ospar[ospar.lon > -15]
+ospar = ospar[ospar.lat < 65]
 
 
 n_entries_removed = n_entries - len(ospar)
@@ -366,7 +366,7 @@ da_ospar_meta = da_ospar_meta[
         "Faeces",
         "MICRO",
         "FISH",
-        "Aquaculture",
+        "AQUA",
         "String",
     ]
 ]
@@ -432,7 +432,7 @@ ospar_df = ospar_df[
         "CB",
         "LOCAL",
         "FISH",
-        "Aquaculture",
+        "AQUA",
         "String",
     ]
 ]
@@ -506,7 +506,7 @@ da_ospar_meta2_detrend = Xc - trends + X_median
 # %%
 # Compute composition of items (wrt plastics) per category
 # -----------------------------------------------------------------------------
-composition = da_ospar_meta2[["FISH", "Aquaculture"]] / da_ospar_meta2["Plastic"]
+composition = da_ospar_meta2[["FISH", "AQUA"]] / da_ospar_meta2["Plastic"]
 
 
 # %%
@@ -549,9 +549,9 @@ da_ospar_meta2_detrend = da_ospar_meta2_detrend.assign_attrs(
 ospar_datatree = dt.DataTree.from_dict(
     {
         "/category_mapping": da_ospar2meta,
-        "/preprocessed/": da_ospar_meta2,
-        "/preprocessed/detrended/": da_ospar_meta2_detrend,
-        "/preprocessed/composition/": composition,
+        "/preprocessed/absolute/": da_ospar_meta2,
+        "/preprocessed/absolute/detrended/": da_ospar_meta2_detrend,
+        "/preprocessed/fraction/": composition,
     }
 )
 ospar_datatree.to_zarr("data/beach_litter/ospar/preprocessed.zarr", mode="w")

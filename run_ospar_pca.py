@@ -1,4 +1,5 @@
 # %%
+import os
 
 import cartopy.feature as cfeature
 import datatree as dt
@@ -17,16 +18,18 @@ from utils.styles import get_cyclic_palette
 # =============================================================================
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
-VARIABLE = "Plastic"
+VARIABLE = "fraction/AQUA"
 YEAR = 2001
 
 base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
+pca_path = f"data/pca/{VARIABLE}/{YEAR}/"
 
+if not os.path.exists(pca_path):
+    os.makedirs(pca_path)
 # OSPAR data
 # -----------------------------------------------------------------------------
-ospar = dt.open_datatree("data/ospar/preprocessed.zarr", engine="zarr")
-litter_o = ospar["preprocessed"].to_dataset()
-litter_o = litter_o[VARIABLE]
+ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
+litter_o = ospar["preprocessed/" + VARIABLE]
 litter_o = litter_o.sel(year=slice(YEAR, 2020)).dropna("beach_id", **{"how": "all"})
 
 # GPR data
@@ -158,4 +161,6 @@ ax.scatter(
 # Store the results
 # =============================================================================
 
-pca_result.to_netcdf("data/pca/pca_beaches.nc", engine="netcdf4")
+pca_result.to_netcdf(pca_path + "pca_clustering.nc", engine="netcdf4")
+
+# %%

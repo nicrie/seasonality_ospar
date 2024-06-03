@@ -28,16 +28,15 @@ print("Loading data...")
 
 SEASON = ["DJF", "MAM", "JJA", "SON"]
 RANDOM_SEED = 2803 + 2
-VARIABLE = "Aquaculture"
-YEAR = 2016
+VARIABLE = "absolute/AQUA"
+YEAR = 2001
 
 
 rng = np.random.default_rng(RANDOM_SEED)
 
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-ospar = ospar["preprocessed"].to_dataset()
+ospar = ospar["preprocessed/" + VARIABLE]
 ospar = ospar.sel(year=slice(YEAR, 2020))
-ospar = ospar[VARIABLE]
 ospar = ospar.dropna("beach_id", **{"how": "all"})
 
 # Transformation parameter for Yeo-Johnson transform

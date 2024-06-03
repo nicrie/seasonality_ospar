@@ -22,19 +22,18 @@ from utils.styles import get_cyclic_palette
 
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
-VARIABLE = "Plastic"
+VARIABLE = "absolute/Plastic"
 YEAR = 2001
 
 
 base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
 fig_path = f"figs/gpr/evaluation/{VARIABLE}/{YEAR}/"
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-litter_o = ospar["preprocessed"].to_dataset()
-litter_o = litter_o[VARIABLE]
+litter_o = ospar["preprocessed/" + VARIABLE]
 litter_o = litter_o.sel(year=slice(YEAR, 2020)).dropna("beach_id", **{"how": "all"})
 
 model = dt.open_datatree(base_path + "posterior_predictive.zarr", engine="zarr")
-litter_m = model["posterior_predictive"][VARIABLE]
+litter_m = model["posterior_predictive"][VARIABLE.split("/")[1]]
 
 idata = {}
 for s in SEASONS:

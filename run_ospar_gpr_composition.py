@@ -22,14 +22,14 @@ print("Loading data...")
 
 SEASON = ["DJF", "MAM", "JJA", "SON"]
 RANDOM_SEED = 2803 + 2
-VARIABLE = "Aquaculture"
+VARIABLE = "fracture/AQUA"
 YEAR = 2001
 
 
 rng = np.random.default_rng(RANDOM_SEED)
 
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-composition = ospar["preprocessed/composition"].to_dataset()
+composition = ospar["preprocessed/" + VARIABLE]
 composition = composition.sel(year=slice(YEAR, 2020))
 
 is_valid = composition.notnull()
@@ -39,7 +39,6 @@ composition = (
     .where(is_valid)
 )
 
-composition = composition[VARIABLE]
 composition = composition.dropna("beach_id", **{"how": "all"})
 
 
@@ -177,7 +176,7 @@ def fit_gp_model(season, fit=True):
                 "eta_2",
                 "rho_1",
                 "rho_2",
-                "sigma_pred",
+                "sigma",
                 "mu_pred",
             ],
         )
@@ -252,7 +251,7 @@ gpr_pp = dt.DataTree.from_dict({"posterior_predictive": gpr_pp})
 # %%
 # Save GP model output
 # =============================================================================
-base_path = f"data/gpr/comp/{VARIABLE}/{YEAR}/"
+base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
 if not os.path.exists(base_path):
     os.makedirs(base_path)
 
