@@ -22,24 +22,24 @@ print("Loading data...")
 
 SEASON = ["DJF", "MAM", "JJA", "SON"]
 RANDOM_SEED = 2803 + 2
-VARIABLE = "fracture/AQUA"
+VARIABLE = "fraction/AQUA"
 YEAR = 2001
 
 
 rng = np.random.default_rng(RANDOM_SEED)
 
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-composition = ospar["preprocessed/" + VARIABLE]
-composition = composition.sel(year=slice(YEAR, 2020))
+fraction = ospar["preprocessed/" + VARIABLE]
+fraction = fraction.sel(year=slice(YEAR, 2020))
 
-is_valid = composition.notnull()
-composition = (
-    composition.where(composition >= 0.001, 0.001)
-    .where(composition <= 0.999, 0.999)
+is_valid = fraction.notnull()
+fraction = (
+    fraction.where(fraction >= 0.001, 0.001)
+    .where(fraction <= 0.999, 0.999)
     .where(is_valid)
 )
 
-composition = composition.dropna("beach_id", **{"how": "all"})
+fraction = fraction.dropna("beach_id", **{"how": "all"})
 
 
 # %%
@@ -47,10 +47,10 @@ composition = composition.dropna("beach_id", **{"how": "all"})
 # =============================================================================
 def fit_gp_model(season, fit=True):
     # Dimensions and coordinates
-    beaches_all = ospar.beach_id.values
-    beach_lonlats_all = np.vstack([ospar.lon, ospar.lat]).T
+    beaches_all = fraction.beach_id.values
+    beach_lonlats_all = np.vstack([fraction.lon, fraction.lat]).T
 
-    data = composition.sel(season=season).dropna("beach_id", **{"how": "all"})
+    data = fraction.sel(season=season).dropna("beach_id", **{"how": "all"})
     data = data.assign_coords(beach_idx=("beach_id", np.arange(data.beach_id.size)))
     data_stacked = data.stack(x=[...]).dropna("x")
 
@@ -72,7 +72,7 @@ def fit_gp_model(season, fit=True):
         y = pm.ConstantData("y", data_stacked.values, dims="sample")
 
         # Mean function
-        mean_lower, mean_upper = composition.mean("year").quantile([0.025, 0.975])
+        mean_lower, mean_upper = fraction.mean("year").quantile([0.025, 0.975])
         mean_lower = max(mean_lower.item(), 0.001)
         mean_upper = min(mean_upper.item(), 0.999)
         params_mu_mu = pm.find_constrained_prior(
