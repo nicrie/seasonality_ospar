@@ -3,6 +3,7 @@
 # =============================================================================
 import json
 import os
+import re
 
 import datatree as dt
 import numpy as np
@@ -134,9 +135,18 @@ filepaths = [os.path.join(base_path, fp) for fp in filepaths]
 ospar = pd.concat(map(pd.read_csv, filepaths))
 ospar = ospar.set_index("Survey ID").sort_index()
 
+# OSPAR categories
 categories_ospar = ospar.loc[
     :, "Plastic: Yokes [1]":"Survey: Remarks [999]"
 ].columns.values
+categories_ospar_numeric = [c for c in categories_ospar if c.split(":")[0] != "Survey"]
+
+# Dictionary to convert individual OSPAR categories to groups
+path_dictionary = "data/beach_litter/ospar/OSPAR_meta_litter_categories.xlsx"
+ospar2meta = pd.read_excel(path_dictionary)
+ospar2meta = ospar2meta.drop(["CB", "Comments"], axis=1, inplace=False)
+ospar2meta = ospar2meta.set_index("OSPAR")
+
 
 # Convert survey date to datetime
 ospar["date"] = pd.to_datetime(ospar["Survey date"], format="%d/%m/%Y")
@@ -297,126 +307,22 @@ print(
 print("OSPAR data set contains {} entries".format(n_entries))
 
 
-da = ospar.groupby(["year", "month"]).size().to_xarray()
-
-# %%
-# Aggregate OSPAR categories to META (EUROPE) categories
-# =============================================================================
-ospar_meta = ospar.copy(deep=True)
-ospar_meta.drop(categories_ospar, axis=1, inplace=True)
-
-# Dictionary to convert from OSPAR to Científicos de la Basura (CB) categories
-path_dictionary = "data/beach_litter/ospar/OSPAR_meta_litter_categories.xlsx"
-ospar2meta = pd.read_excel(path_dictionary)
-
-ospar2meta = ospar2meta.drop(["CB", "Comments"], axis=1, inplace=False)
-ospar2meta = ospar2meta.set_index("OSPAR")
-
-for cat in ospar2meta.columns:
-    cats = ospar2meta.loc[ospar2meta[cat] == 1].index.values
-    ospar_meta[cat] = ospar[cats].sum(axis=1)
-# %%
-# Aggregate OSPAR categories to CB categories
-# =============================================================================
-ospar_cb = ospar.copy(deep=True)
-ospar_cb.drop(categories_ospar, axis=1, inplace=True)
-
-# Dictionary to convert from OSPAR to Científicos de la Basura (CB) categories
-path_dictionary = "data/beach_litter/ospar/OSPAR&CB_litter_categories.xlsx"
-ospar2chile = pd.read_excel(path_dictionary, names=["OSPAR", "CB", "Comments"])
-categories_cb = ospar2chile["CB"].dropna().unique()
-# Do not use category "Other" which is inconsistent in CB
-categories_cb = [cat for cat in categories_cb if cat not in ["Other"]]
-
-for cat in categories_cb:
-    cats = ospar2chile["OSPAR"][ospar2chile["CB"] == cat]
-    ospar_cb[cat] = ospar[cats].sum(axis=1)
-
-
-# %%
-# Convert to xarray
-# =============================================================================
-da_ospar_meta = ospar_meta.reset_index()
-da_ospar_meta = da_ospar_meta[
-    [
-        "Beach ID",
-        "Beach name",
-        "Country",
-        "Region",
-        "date",
-        "year",
-        "month",
-        "season",
-        "lon",
-        "lat",
-        "TA",
-        "SUP",
-        "SEA",
-        "Cigarette butts",
-        "Plastic",
-        "Rubber",
-        "Cloth",
-        "Paper",
-        "Wood",
-        "Metal",
-        "Glass",
-        "Pottery",
-        "San",
-        "Med",
-        "Faeces",
-        "MICRO",
-        "FISH",
-        "AQUA",
-        "String",
-    ]
-]
-da_ospar_meta = da_ospar_meta.rename(
-    {
-        "Beach ID": "beach_id",
-        "Beach name": "beach_name",
-        "Country": "country",
-        "Region": "region",
-        "Cigarette butts": "CB",
-    },
-    axis=1,
-)
-da_ospar_meta = da_ospar_meta.set_index(["date", "beach_id"])
-da_ospar_meta = da_ospar_meta.to_xarray()
-da_ospar_meta["beach_name"] = da_ospar_meta["beach_name"].max("date").astype(str)
-da_ospar_meta["country"] = da_ospar_meta["country"].max("date").astype(str)
-da_ospar_meta["region"] = da_ospar_meta["region"].max("date").astype(str)
-da_ospar_meta["year"] = da_ospar_meta["year"].max("beach_id").astype(int)
-da_ospar_meta["month"] = da_ospar_meta["month"].max("beach_id").astype(int)
-da_ospar_meta["season"] = da_ospar_meta["season"].max("beach_id").astype(str)
-da_ospar_meta["lon"] = da_ospar_meta["lon"].mean("date").astype(float)
-da_ospar_meta["lat"] = da_ospar_meta["lat"].mean("date").astype(float)
-da_ospar_meta = da_ospar_meta.set_coords(
-    ["beach_name", "country", "region", "year", "month", "season", "lon", "lat"]
-)
-
-da_ospar_meta["LOCAL"] = (
-    da_ospar_meta[["Paper", "Metal", "Glass", "CB"]]
-    .to_array()
-    .sum("variable", skipna=False)
-)
-
 # %%
 # How many measurement per beach, season and year?
 # -----------------------------------------------------------------------------
-n_surveys = ospar_meta.groupby(["year", "season", "Beach ID"]).size()
+n_surveys = ospar.groupby(["year", "season", "Beach ID"]).size()
 n, frequency = np.unique(n_surveys, return_counts=True)
 print("Number of surveys per beach, season and year")
 print(n)
 print("Frequency of number of surveys")
 print(frequency)
 
+
 # %%
-# Convert data to 1 survey per season, year and beach
-# -----------------------------------------------------------------------------
-ospar_df = da_ospar_meta.dropna("beach_id", **{"how": "all"})
-ospar_df = ospar_df.to_dataframe().reset_index()
-ospar_df = ospar_df.dropna(subset=["TA"])
-idx, beach_ids = pd.factorize(ospar_df["beach_id"].values, sort=True)
+# Convert to xarray
+# =============================================================================
+idx, beach_ids = pd.factorize(ospar["Beach ID"].values, sort=True)
+ospar_df = ospar.copy()
 ospar_df["beach_idx"] = idx
 ospar_df = ospar_df[
     [
@@ -425,36 +331,65 @@ ospar_df = ospar_df[
         "beach_idx",
         "year",
         "season",
-        "TA",
-        "Plastic",
-        "SEA",
-        "SUP",
-        "CB",
-        "LOCAL",
-        "FISH",
-        "AQUA",
-        "String",
     ]
+    + categories_ospar_numeric
 ]
-# NOTE: skipna=True is not yet implemented in pandas
-# see https://github.com/pandas-dev/pandas/issues/15675
-# For now, use workaround using fillna and replace (https://stackoverflow.com/a/62075919)
-# ospar_df = ospar_df.groupby(["lon", "lat", "beach_idx", "year", "season"]).mean(skipna=True)
-# ospar_df = ospar_df.groupby(["lon", "lat", "beach_idx", "year", "season"]).agg(
-#     lambda g: g.max(skipna=True)
-# )
+
 ospar_df = ospar_df.groupby(["lon", "lat", "beach_idx", "year", "season"]).max()
-da_ospar_meta2 = ospar_df.reset_index(["lon", "lat"]).to_xarray()
-da_ospar_meta2 = da_ospar_meta2.assign_coords(
+ospar_da = ospar_df.reset_index(["lon", "lat"]).to_xarray()
+ospar_da = ospar_da.assign_coords(
     {
-        "lon": ("beach_idx", da_ospar_meta2.lon.max(("season", "year")).values),
-        "lat": ("beach_idx", da_ospar_meta2.lat.max(("season", "year")).values),
+        "lon": ("beach_idx", ospar_da.lon.max(("season", "year")).values),
+        "lat": ("beach_idx", ospar_da.lat.max(("season", "year")).values),
         "beach_id": ("beach_idx", np.unique(beach_ids)),
     }
 )
-da_ospar_meta2 = da_ospar_meta2.set_index(beach_idx="beach_id")
-da_ospar_meta2 = da_ospar_meta2.rename({"beach_idx": "beach_id"})
-da_ospar_meta2 = da_ospar_meta2.sel(season=["DJF", "MAM", "JJA", "SON"])
+ospar_da = ospar_da.set_index(beach_idx="beach_id")
+ospar_da = ospar_da.rename({"beach_idx": "beach_id"})
+ospar_da = ospar_da.sel(season=["DJF", "MAM", "JJA", "SON"])
+ospar_da = ospar_da.to_array("category_id", name="number_of_items")
+
+
+def split_ospar_category_name(ospar_name):
+    """Split OSPAR category name into category, item name and id
+
+    For example, the category "Plastic: Yokes [1]" is split into
+    category="Plastic", item="Yokes" and id=1
+    """
+
+    match = re.search(r"(.+?):\s(.+?)\s\[(.+?)\]", ospar_name)
+    if match:
+        return match.group(1), match.group(2), int(match.group(3))
+
+
+def split_list_ospar_category_name(ospar_names):
+    return pd.DataFrame(
+        [split_ospar_category_name(name) for name in ospar_names],
+        columns=["group", "category", "category_id"],
+    )
+
+
+ospar_cats = split_list_ospar_category_name(ospar_da.category_id.values)
+ospar_da = ospar_da.assign_coords(
+    category=("category_id", ospar_cats["category"]),
+    category_id=("category_id", ospar_cats["category_id"]),
+    group=("category_id", ospar_cats["group"]),
+)
+
+
+cats_df = split_list_ospar_category_name(ospar2meta.index.values)
+ospar_meta = {}
+for col in ospar2meta.columns:
+    mapping = ospar2meta[col].copy()
+    mapping.index = split_list_ospar_category_name(mapping.index.values)["category_id"]
+    is_valid_id = mapping.where(mapping == 1).dropna().index
+    subgroup = ospar_da.sel(category_id=ospar_da.category_id.isin(is_valid_id))
+    group_sum = subgroup.sum("category_id").where(subgroup.notnull().any("category_id"))
+    ospar_meta[col] = group_sum
+
+ospar_meta = xr.Dataset(ospar_meta)
+
+ospar_meta["LOCAL"] = ospar_meta["Metal"] + ospar_meta["Glass"] + ospar_meta["Paper"]
 
 
 # Add country coordinate
@@ -479,34 +414,33 @@ def convert_beach_id_to_country(ids):
     return [id2country[id[:2]] for id in ids]
 
 
-beach_ids = da_ospar_meta2.beach_id
+beach_ids = ospar_meta.beach_id
 country_ids = convert_beach_id_to_country(beach_ids.values)
 country_ids = xr.DataArray(country_ids, dims="beach_id", coords={"beach_id": beach_ids})
-
-da_ospar_meta2 = da_ospar_meta2.assign_coords(country=country_ids)
+ospar_meta = ospar_meta.assign_coords(country=country_ids)
 
 
 # %%
 # Detrend OSPAR data
 # -----------------------------------------------------------------------------
-X = da_ospar_meta2
+X = ospar_meta
 X_median = X.median("year")
 Xc = X - X_median
 has_trend, intercept, slope, slope_l, slope_h = theil_sen_regression(Xc, dim="year")
 
 # Only significant trends
-years = da_ospar_meta2.year.astype(float)
+years = ospar_meta.year.astype(float)
 years = (years - years.min()) / (years.max() - years.min())
 trends = intercept + slope * years
 trends = trends.where(has_trend, 0)
 intercept = intercept.where(has_trend, 0)
 
-da_ospar_meta2_detrend = Xc - trends + X_median
+ospar_meta_detrended = Xc - trends + X_median
 
 # %%
 # Compute composition of items (wrt plastics) per category
 # -----------------------------------------------------------------------------
-composition = da_ospar_meta2[["FISH", "AQUA"]] / da_ospar_meta2["Plastic"]
+composition = ospar_meta[["FISH", "AQUA", "LAND"]] / ospar_meta["Plastic"]
 
 
 # %%
@@ -516,7 +450,6 @@ categories = dict(
     ospar_meta=list(ospar2meta.columns),
     ospar_meta_special=["TA", "SUP", "SEA", "Cigarette butts"],
     ospar=list(categories_ospar),
-    cb=list(categories_cb),
 )
 with open("utils/categories.json", "w", encoding="utf-8") as f:
     json.dump(categories, f, ensure_ascii=False, indent=4)
@@ -530,14 +463,14 @@ da_ospar2meta = da_ospar2meta.assign_attrs({"description": description})
 
 # Add some more meta data
 description = "OSPAR beach litter data aggregated into meta categories based on van Loon et al. 2023. "
-da_ospar_meta2 = da_ospar_meta2.assign_attrs(
+ospar_meta = ospar_meta.assign_attrs(
     {
         "description": description,
         "units": "items/100 m beach line",
         "source": "OSPAR",
     }
 )
-da_ospar_meta2_detrend = da_ospar_meta2_detrend.assign_attrs(
+ospar_meta_detrended = ospar_meta_detrended.assign_attrs(
     {
         "description": "Detrended OSPAR beach litter data",
         "units": "items/100 m beach line",
@@ -549,8 +482,9 @@ da_ospar_meta2_detrend = da_ospar_meta2_detrend.assign_attrs(
 ospar_datatree = dt.DataTree.from_dict(
     {
         "/category_mapping": da_ospar2meta,
-        "/preprocessed/absolute/": da_ospar_meta2,
-        "/preprocessed/absolute/detrended/": da_ospar_meta2_detrend,
+        "/categories/": ospar_da,
+        "/preprocessed/absolute/": ospar_meta,
+        "/preprocessed/absolute/detrended/": ospar_meta_detrended,
         "/preprocessed/fraction/": composition,
     }
 )

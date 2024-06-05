@@ -3,6 +3,9 @@
         "TA",
         "SUP",
         "SEA",
+        "FISH",
+        "AQUA",
+        "LAND",
         "Cigarette butts",
         "Plastics (CB)",
         "Plastic",
@@ -17,9 +20,7 @@
         "Med",
         "Faeces",
         "MICRO",
-        "AQUA",
-        "String",
-        "FISH"
+        "String"
     ],
     "ospar_meta_special": [
         "TA",
@@ -176,12 +177,5 @@
         "Survey: Old_cloth_rope [210]",
         "Survey: Pellets [998]",
         "Survey: Remarks [999]"
-    ],
-    "cb": [
-        "Plastics",
-        "Papers",
-        "Cigarette butts",
-        "Metals",
-        "Glass"
     ]
 }
