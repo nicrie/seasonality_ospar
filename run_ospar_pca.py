@@ -35,7 +35,7 @@ litter_o = litter_o.sel(year=slice(YEAR, 2020)).dropna("beach_id", **{"how": "al
 # GPR data
 # -----------------------------------------------------------------------------
 model = dt.open_datatree(base_path + "posterior_predictive.zarr", engine="zarr")
-litter_m = model["posterior_predictive"][VARIABLE]
+litter_m = model["posterior_predictive"][VARIABLE.split("/")[1]]
 
 # Statistical evaluation
 # -----------------------------------------------------------------------------
@@ -128,12 +128,17 @@ sns.heatmap(
 
 cmap = sns.color_palette("viridis", as_cmap=True)
 
-mode = 2
+mode = 1
 sign = 1
 comps_signed = sign * pca_result.comps.sel(mode=mode)
 
+# Probability
 data_sub = (comps_signed > 0).mean("n")
-norm = mcolors.Normalize(vmin=0.5, vmax=0.8)
+norm = mcolors.Normalize(vmin=0.5, vmax=0.6)
+
+# Mean effect size
+data_size = (comps_signed).mean("n")
+data_size = data_size.where(data_size > 0, 0)
 
 
 colors = cmap(norm(data_sub.values))
@@ -149,7 +154,7 @@ ax.scatter(
     c=colors,
     ec="w",
     lw=0.5,
-    s=5 + 200 * data_sub.values,
+    s=5 + 5000 * data_size.values,
     alpha=0.5,
     transform=PlateCarree(),
     zorder=4,
