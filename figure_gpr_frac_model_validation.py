@@ -15,7 +15,7 @@ utils.styles.set_theme()
 
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
-VARIABLE = "fraction/AQUA"
+VARIABLE = "fraction/FISH"
 YEAR = 2001
 
 base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
@@ -145,7 +145,7 @@ prior_mu_mu = expit(prior.mu_mu)
 kwargs = {"clip": [0, None], "color": ".5", "fill": True}
 kwargs1 = {"clip": [0, None], "color": ".5", "fill": True}
 sns.kdeplot(data=prior_mu_mu, ax=axes["mu_mu"], label="Prior", **kwargs1)
-sns.kdeplot(data=prior.sigma_pred, ax=axes["sigma"], label="Prior", **kwargs)
+sns.kdeplot(data=prior.sigma, ax=axes["sigma"], label="Prior", **kwargs)
 sns.kdeplot(data=prior.eta_1, ax=axes["eta_1"], **kwargs)
 sns.kdeplot(data=prior.eta_2, ax=axes["eta_2"], **kwargs)
 sns.kdeplot(data=prior.rho_1, ax=axes["rho_1"], **kwargs)
