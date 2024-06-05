@@ -22,14 +22,15 @@ print("Loading data...")
 
 SEASON = ["DJF", "MAM", "JJA", "SON"]
 RANDOM_SEED = 2803 + 2
-VARIABLE = "fraction/AQUA"
+QUANTITY = "fraction"
+VARIABLE = "AQUA"
 YEAR = 2001
 
 
 rng = np.random.default_rng(RANDOM_SEED)
 
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-fraction = ospar["preprocessed/" + VARIABLE]
+fraction = ospar["/".join(["preprocessed", QUANTITY, VARIABLE])]
 fraction = fraction.sel(year=slice(YEAR, 2020))
 
 is_valid = fraction.notnull()
@@ -227,8 +228,8 @@ gpr_pp = xr.concat(list(model_output.values()), dim="season").assign_coords(
 )
 gpr_pp = gpr_pp.assign_coords(
     {
-        "lon": ("beach_id", ospar.lon.values),
-        "lat": ("beach_id", ospar.lat.values),
+        "lon": ("beach_id", fraction.lon.values),
+        "lat": ("beach_id", fraction.lat.values),
     }
 )
 
@@ -237,9 +238,9 @@ gpr_pp = gpr_pp.assign_coords(
 da_agg = expit(gpr_pp[VARIABLE + "_trans"])
 da_agg.name = VARIABLE
 da_agg.attrs["description"] = (
-    "Posterior predictive distribution of {VARIABLE} abundance"
+    f"Posterior predictive distribution of {VARIABLE} fraction."
 )
-da_agg.attrs["units"] = "number of items per 100 m"
+da_agg.attrs["units"] = "fraction of items per 100 m"
 
 gpr_pp[VARIABLE] = da_agg
 
@@ -251,7 +252,7 @@ gpr_pp = dt.DataTree.from_dict({"posterior_predictive": gpr_pp})
 # %%
 # Save GP model output
 # =============================================================================
-base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
+base_path = f"data/gpr/{QUANTITY}/{VARIABLE}/{YEAR}/"
 if not os.path.exists(base_path):
     os.makedirs(base_path)
 
