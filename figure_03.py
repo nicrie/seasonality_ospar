@@ -18,14 +18,18 @@ utils.styles.set_theme()
 # %%
 # Load data
 # =============================================================================
-pca_result = xr.open_dataset("data/pca/pca_beaches.nc", engine="netcdf4")
+YEAR = 2001
+QUANTITY = "absolute"
+VARIABLE = "Plastic"
+base_path = f"data/pca/{QUANTITY}/{VARIABLE}/{YEAR}/"
+
+pca_result = xr.open_dataset(base_path + "pca_clustering.nc", engine="netcdf4")
 components = pca_result.comps
 pcs = pca_result.scores
 
-expvar_p = pca_result["expvar_ratio_pos"].assign_coords(mode=["1+", "2+", "3+", "4+"])
-expvar_n = pca_result["expvar_ratio_neg"].assign_coords(mode=["1-", "2-", "3-", "4-"])
-expvar = xr.concat([expvar_p, expvar_n], dim="mode").rename({"mode": "cluster"})
-expvar.name = "explained_variance_ratio"
+exp_var_ratio = pca_result.expvar_ratio_pos.quantile([0.5, 0.025, 0.975], "n") * 100
+mid1, low1, up1 = exp_var_ratio.sel(mode=1)
+mid2, low2, up2 = exp_var_ratio.sel(mode=2)
 
 
 def trans_effect_size(s):
@@ -196,9 +200,6 @@ ax2.add_patch(
     )
 )
 
-exp_var_ratio = pca_result.expvar_ratio_pos.quantile([0.5, 0.025, 0.975], "n") * 100
-mid1, low1, up1 = exp_var_ratio.sel(mode=1)
-mid2, low2, up2 = exp_var_ratio.sel(mode=2)
 
 ax1.text(
     0.01,
@@ -325,39 +326,4 @@ ax_expvar2.spines["top"].set_visible(False)
 ax_expvar2.spines["bottom"].set_visible(False)
 
 
-plt.savefig("figs/figure03.png", dpi=300, bbox_inches="tight")
-
-# %%
-# Explained variance ratio
-# =============================================================================
-df = (
-    expvar.sel(cluster=["1+", "2+", "1-", "2-", "3+", "3-"])
-    .to_dataframe()
-    .reset_index()
-)
-palette = sns.color_palette(["r", "r", ".8", ".8", ".8", ".8"], desat=0.8)
-fig = plt.figure(figsize=(5.2, 3.5), dpi=500)
-ax = fig.add_subplot(111)
-sns.violinplot(
-    ax=ax,
-    data=df,
-    x="cluster",
-    hue="cluster",
-    y="explained_variance_ratio",
-    bw_adjust=1,
-    cut=1,
-    linewidth=1,
-    palette=palette,
-)
-ax.set_yticks(np.arange(0, 0.55, 0.1))
-ax.set_yticklabels([f"{i:.0%}" for i in np.arange(0, 0.55, 0.1)])
-ax.set_ylabel("Explained variance (%)")
-ax.set_xlabel("Cluster")
-sns.despine(fig, trim=True, bottom=True, left=True)
-# add horizontal grid line
-ax.grid(axis="y", linestyle="--", alpha=0.5)
-# make length of ticks shorter
-ax.tick_params(axis="both", length=0)
-plt.savefig("figs/figure_supp_cluster_expvar.png", dpi=300, bbox_inches="tight")
-
-# %%
+# plt.savefig("figs/figure03.png", dpi=300, bbox_inches="tight")
