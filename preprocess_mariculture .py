@@ -129,7 +129,7 @@ da = xr.concat(da, pd.Index(species, name="species_group"))
 # Apply the thresholding, per bin max 1 count
 da = (da / da).fillna(0)
 
-# The bin size is 0.018 degrees, which is approximately 3 km, so we have counts per 9 km^2
+# The bin size is 0.027 degrees, which is approximately 3 km, so we have counts per 9 km^2
 # However, due to the curvature of the earth, the area of a bin will be smaller towards the poles
 # so we need to apply a correction factor to account for this.
 coslat_weights = np.cos(np.deg2rad(da.lat))
