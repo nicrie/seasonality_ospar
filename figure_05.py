@@ -120,7 +120,7 @@ fish_capture_cl2 = fish_capture_cl2.reset_index()
 
 # %%
 # Aquaculture
-mari = sources["mariculture"].sel(forcing="exports", species_group="all").to_dataset()
+mari = sources["mariculture"].sel(forcing="wave", species_group="all").to_dataset()
 mari = mari.stack(point=["lat", "lon"]).dropna("point")
 
 # Icons
