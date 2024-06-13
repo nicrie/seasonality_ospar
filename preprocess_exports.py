@@ -13,7 +13,7 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 # Load data
 # =============================================================================
 ospar = open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-countries_nea = np.unique(ospar["preprocessed"].country)
+countries_nea = np.unique(ospar["preprocessed/absolute"].country)
 
 path = "data/economic/exports/eumofa/"
 
