@@ -3,7 +3,6 @@ import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import seaborn as sns
 import xarray as xr
 from cartopy.crs import PlateCarree, TransverseMercator
@@ -46,25 +45,6 @@ s = abs(s).where(s >= 0)
 
 # Percentage of components above zero
 c = (components > 0).mean("n")
-
-cl1 = pd.DataFrame(
-    {
-        "lon": components.lon,
-        "lat": components.lat,
-        "comps": (s.sel(mode=1)),
-        "size": trans_effect_size(s.sel(mode=1)),
-        "probability": trans_prob(c.sel(mode=1)),
-    }
-)
-cl2 = pd.DataFrame(
-    {
-        "lon": components.lon,
-        "lat": components.lat,
-        "comps": (s.sel(mode=2)),
-        "size": trans_effect_size(s.sel(mode=2)),
-        "probability": trans_prob(c.sel(mode=2)),
-    }
-)
 
 # %%
 # Figure - PCA eigenvectors and projections
