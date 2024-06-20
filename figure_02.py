@@ -16,18 +16,18 @@ from utils.styles import get_cyclic_palette
 
 utils.styles.set_theme()
 
+
 # %%
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
+QUANTITY = "absolute"
 VARIABLE = "Plastic"
 YEAR = 2001
 
 
-base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
-fig_path = f"figs/gpr/evaluation/{VARIABLE}/{YEAR}/"
-ospar = dt.open_datatree("data/ospar/preprocessed.zarr", engine="zarr")
-litter_o = ospar["preprocessed"].to_dataset()
-litter_o = litter_o[VARIABLE]
+base_path = f"data/gpr/{QUANTITY}/{VARIABLE}/{YEAR}/"
+ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
+litter_o = ospar[f"preprocessed/{QUANTITY}/{VARIABLE}"]
 litter_o = litter_o.sel(year=slice(YEAR, 2020)).dropna("beach_id", **{"how": "all"})
 
 model = dt.open_datatree(base_path + "posterior_predictive.zarr", engine="zarr")
@@ -95,11 +95,12 @@ def create_bidirectional_seasons_visualization(
     fig=None,
     ax=None,
     wfac=200,
+    important_relations=None,
 ):
     if fig is None:
         fig, ax = plt.subplots(**{"figsize": (6, 6)})
 
-    cmap_peak_season = sns.husl_palette(h=0.7, as_cmap=False, n_colors=4)
+    cmap_peak_season = sns.husl_palette(h=0.7, s=0.3, as_cmap=False, n_colors=4)
     node_colors = {
         "DJF": cmap_peak_season[0],
         "MAM": cmap_peak_season[1],
@@ -156,6 +157,13 @@ def create_bidirectional_seasons_visualization(
         node_color=[node_colors[n] for n in G.nodes],
     )
 
+    highlight_color = sns.color_palette("colorblind")[3]
+
+    def get_label_color(u, v, highlight_color):
+        return highlight_color if (u, v) in important_relations else ".5"
+
+    label_colors = [get_label_color(u, v, highlight_color) for u, v in G.edges()]
+
     # Draw the edges with varying thickness
     _ = nx.draw_networkx_edges(
         G,
@@ -163,10 +171,10 @@ def create_bidirectional_seasons_visualization(
         ax=ax,
         arrowstyle="-|>",
         arrowsize=15,
-        edge_color=".3",
+        # edge_color=".3",
         connectionstyle="arc3,rad=0.1",
         width=[G[u][v][0]["weight"] ** (2) / wfac for u, v in G.edges()],
-        # edge_color=[G[u][v][0]["weight"] ** (2) / 200 for u, v in G.edges()],
+        edge_color=label_colors,
         # edge_cmap=plt.cm.plasma,
         min_source_margin=20,
         min_target_margin=20,
@@ -174,47 +182,36 @@ def create_bidirectional_seasons_visualization(
 
     # Draw the labels
     # nx.draw_networkx_labels(G, pos, ax=ax)
-    counter_clockwise = [
-        ("MAM", "DJF"),
-        ("DJF", "SON"),
-        ("SON", "JJA"),
-        ("JJA", "MAM"),
-        ("MAM", "SON"),
-        ("DJF", "JJA"),
-    ]
-    clockwise = [
-        ("DJF", "MAM"),
-        ("MAM", "JJA"),
-        ("JJA", "SON"),
-        ("SON", "DJF"),
-        ("JJA", "DJF"),
-        ("SON", "MAM"),
-    ]
     nx.draw_networkx_edge_labels(
         G,
         pos,
         ax=ax,
         font_size=8,
         label_pos=0.65,
-        font_color=".3",
+        font_color=highlight_color,
+        font_weight="bold",
         edge_labels={
             (u, v): d["weight"]
             for u, v, d in G.edges(data=True)
-            if (u, v) in counter_clockwise
+            if (u, v) in important_relations
         },
-        bbox=dict(boxstyle="round", fc="w", ec="w", alpha=0.3, pad=0.1),
+        bbox=dict(boxstyle="round", fc="w", ec="w", alpha=0.75, pad=0.1),
+        rotate=False,
     )
     nx.draw_networkx_edge_labels(
         G,
         pos,
         ax=ax,
         font_size=8,
-        font_color=".3",
         label_pos=0.65,
+        font_color=".5",
         edge_labels={
-            (u, v): d["weight"] for u, v, d in G.edges(data=True) if (u, v) in clockwise
+            (u, v): d["weight"]
+            for u, v, d in G.edges(data=True)
+            if (u, v) not in important_relations
         },
-        bbox=dict(boxstyle="round", fc="w", ec="w", alpha=0.3, pad=0.1),
+        bbox=dict(boxstyle="round", fc="w", ec="w", alpha=0.75, pad=0.1),
+        rotate=False,
     )
 
     # Transform from data coordinates (scaled between xlim and ylim) to display coordinates
@@ -241,6 +238,25 @@ def create_bidirectional_seasons_visualization(
 
 # %%
 
+
+important_relations_A = [
+    ("DJF", "JJA"),
+    ("DJF", "SON"),
+    ("MAM", "JJA"),
+    ("MAM", "SON"),
+    ("MAM", "DJF"),
+    ("SON", "JJA"),
+]
+important_relations_B = [
+    ("DJF", "MAM"),
+    ("DJF", "JJA"),
+    ("DJF", "SON"),
+    ("MAM", "JJA"),
+    ("MAM", "SON"),
+    ("SON", "JJA"),
+]
+
+
 fig, axes = plt.subplots(1, 2, **{"figsize": (7.2, 3.6)})
 create_bidirectional_seasons_visualization(
     (perc_beaches_pos * 100).round(0).astype(int),
@@ -248,6 +264,7 @@ create_bidirectional_seasons_visualization(
     fig,
     axes[0],
     3e2,
+    important_relations=important_relations_A,
 )
 dir_pos = (100 * wres_pos).sel(quantile=0.5).round(0).astype(int)
 dir_neg = (100 * wres_neg).sel(quantile=0.5).round(0).astype(int)
@@ -257,6 +274,7 @@ create_bidirectional_seasons_visualization(
     fig,
     axes[1],
     wfac=2e3,
+    important_relations=important_relations_B,
 )
 axes[0].set_title("A | How many beaches exhibit seasonal differences?", loc="left")
 axes[1].set_title("B | What is the median seasonal variation?", loc="left")
@@ -295,7 +313,7 @@ axes[0].annotate(
     arrowprops=dict(color=".5", arrowstyle="-", connectionstyle="arc3,rad=0.5"),
 )
 axes[1].annotate(
-    "For those beaches, litter \nis 99% more abundant \nin spring than in summer",
+    "For those beaches, litter \nis 112 % more abundant \nin spring than in summer",
     xy=(0.67, 0.79),
     xytext=(0.78, 0.93),
     xycoords="axes fraction",
@@ -309,8 +327,6 @@ axes[1].annotate(
 
 
 # Add a legend to the lower right of the figure
-
-
 class ImageHandler(HandlerBase):
     def create_artists(
         self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans
@@ -371,7 +387,6 @@ axes[1].legend(
 )
 
 
-plt.savefig("figs/figure02.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
+plt.savefig("figs/figure02.png", dpi=500, bbox_inches="tight", pad_inches=0.1)
 plt.show()
-
 # %%
