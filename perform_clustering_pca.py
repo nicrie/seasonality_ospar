@@ -18,7 +18,7 @@ from utils.styles import get_cyclic_palette
 # =============================================================================
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
-VARIABLE = "fraction/AQUA"
+VARIABLE = "absolute/Plastic"
 YEAR = 2001
 
 base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
@@ -167,5 +167,3 @@ ax.scatter(
 # =============================================================================
 
 pca_result.to_netcdf(pca_path + "pca_clustering.nc", engine="netcdf4")
-
-# %%
