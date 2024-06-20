@@ -135,8 +135,8 @@ for s1, s2 in tqdm(combs):
 
     # Relative difference
     diff_is_positive = np.sign(mdiff) > 0
-    denominator = A.median("n").where(diff_is_positive, B.median("n"))
-    rdiff = mdiff / denominator
+    denominator = A.where(diff_is_positive, B)
+    rdiff = ((B - A) / denominator).median("n")
     relative_diff.append(rdiff)
 
     # effect size of mean
@@ -203,8 +203,8 @@ relative_diff = xr.DataArray(
     },
     name="relative_diff",
     attrs={
-        "long_name": "Relative difference",
-        "description": "median(B - A) / median(X). If median(B - A) >= 0, then X = A, else X = B",
+        "long_name": "Median relative difference",
+        "description": "median((B - A) / X). If median(B - A) >= 0, then X = A, else X = B",
     },
 )
 
