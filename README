@@ -9,6 +9,6 @@ In the spirit of transparency, open science, and reproducibility, we have made a
 The analysis for this work was entirely performed unsing Python 3.10. Ensure you have the necessary software and dependencies installed. Refer to the `environment.yml` file for a list of required packages. To install the required dependencies, you can use either `conda` or `mamba`:
 
 ```sh
-conda env create -f `environment.yml`
+conda env create -f environment.yml
 conda activate ospar_seasonality
 ```
