@@ -13,16 +13,40 @@ from tqdm import tqdm
 
 from utils.styles import get_cyclic_palette
 
+
+def compute_cluster_membership_confidence(components):
+    """Compute the confidence of cluster membership based on principal components.
+
+    The confidence is in the interval [0, 1].
+
+    """
+    fraction_above_0 = (components > 0).mean("n")
+    # renomalize to [-1, 1]
+    confidence = (fraction_above_0 - 0.5) / 0.5
+    # ensure confidence is in [0, 1]
+    return confidence.where(confidence > 0, 0)
+
+
+def compute_cluster_effect_size(components):
+    """Compute the effect size for a given cluster based on principal components.
+
+    The effect size is in the interval [0, inf] (latent PCA space).
+
+    """
+    mean_comps = components.mean("n")
+    return mean_comps.where(mean_comps > 0, 0)
+
+
 # %%
 # Load data
 # =============================================================================
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
-VARIABLE = "absolute/Plastic"
+VARIABLE = "fraction/AQUA"
 YEAR = 2001
 
 base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
-pca_path = f"data/pca/{VARIABLE}/{YEAR}/"
+pca_path = f"data/clustering/pca/{VARIABLE}/{YEAR}/"
 
 if not os.path.exists(pca_path):
     os.makedirs(pca_path)
@@ -93,6 +117,10 @@ pca_result = xr.Dataset(
         "expvar_ratio": expvar_ratio,
         "expvar_ratio_pos": expvar_ratio_pos,
         "expvar_ratio_neg": expvar_ratio_neg,
+        "confidence_pos": compute_cluster_membership_confidence(comps),
+        "confidence_neg": compute_cluster_membership_confidence(-comps),
+        "effect_size_pos": compute_cluster_effect_size(comps),
+        "effect_size_neg": compute_cluster_effect_size(-comps),
     },
 )
 
@@ -129,19 +157,16 @@ sns.heatmap(
 cmap = sns.color_palette("viridis", as_cmap=True)
 
 mode = 1
-sign = 1
-comps_signed = sign * pca_result.comps.sel(mode=mode)
 
 # Probability
-data_sub = (comps_signed > 0).mean("n")
-norm = mcolors.Normalize(vmin=0.5, vmax=0.6)
+cluster_conf = pca_result["confidence_pos"].sel(mode=mode)
+norm = mcolors.Normalize(vmin=0.0, vmax=1)
 
 # Mean effect size
-data_size = (comps_signed).mean("n")
-data_size = data_size.where(data_size > 0, 0)
+effect_size = pca_result["effect_size_pos"].sel(mode=mode)
 
 
-colors = cmap(norm(data_sub.values))
+colors = cmap(norm(cluster_conf.values))
 fig = plt.figure(figsize=(8, 8), dpi=300)
 ax = fig.add_subplot(111, projection=PlateCarree())
 ax.add_feature(cfeature.OCEAN, zorder=0, color=".4")
@@ -154,7 +179,7 @@ ax.scatter(
     c=colors,
     ec="w",
     lw=0.5,
-    s=5 + 5000 * data_size.values,
+    s=5 + 5000 * effect_size.values,
     alpha=0.5,
     transform=PlateCarree(),
     zorder=4,
@@ -167,3 +192,5 @@ ax.scatter(
 # =============================================================================
 
 pca_result.to_netcdf(pca_path + "pca_clustering.nc", engine="netcdf4")
+
+# %%
