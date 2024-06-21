@@ -1,0 +1,39 @@
+name: ospar_seasonality
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - xarray
+  - dask
+  - netcdf4
+  - bottleneck
+  - scipy
+  - statsmodels
+  - matplotlib
+  - seaborn
+  - cartopy
+  - geopandas
+  - ipykernel
+  - ca-certificates
+  - certifi
+  - openssl
+  - openpyxl
+  - xeofs
+  - cmocean
+  - pymc
+  - cfgrib
+  - xskillscore
+  - shapely
+  - regionmask
+  - pysal
+  - jupyter
+  - flox
+  - autograd
+  - pydap
+  - numpy
+  - numpyro
+  - numba
+  - pandas
+  - scikit-learn
+  - odfpy
+  - xesmf
