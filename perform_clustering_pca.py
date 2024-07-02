@@ -94,7 +94,11 @@ scores = xr.concat(scores, dim="n")
 comps = xr.concat(comps, dim="n")
 expvar_ratio = xr.concat(expvar_ratio, dim="n")
 scores = scores.assign_coords(n=range(clus_dat.n.size))
-comps = comps.assign_coords(n=range(clus_dat.n.size))
+comps = comps.assign_coords(
+    n=range(clus_dat.n.size),
+    lon=("beach_id", clus_dat.lon.values),
+    lat=("beach_id", clus_dat.lat.values),
+)
 expvar_ratio = expvar_ratio.assign_coords(n=range(clus_dat.n.size))
 
 scores.attrs["solver_kwargs"] = ""
@@ -160,7 +164,7 @@ mode = 1
 
 # Probability
 cluster_conf = pca_result["confidence_pos"].sel(mode=mode)
-norm = mcolors.Normalize(vmin=0.0, vmax=1)
+norm = mcolors.Normalize(vmin=0.0, vmax=0.2)
 
 # Mean effect size
 effect_size = pca_result["effect_size_pos"].sel(mode=mode)

@@ -14,10 +14,10 @@ utils.styles.set_theme()
 # %%
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
-VARIABLE = "fraction/AQUA"
+VARIABLE = "absolute/Plastic"
 YEAR = 2001
 
-base_path = f"data/pca/{VARIABLE}/{YEAR}/"
+base_path = f"data/clustering/pca/{VARIABLE}/{YEAR}/"
 fig_path = f"figs/pca/{VARIABLE}/{YEAR}/"
 
 os.makedirs(fig_path, exist_ok=True)

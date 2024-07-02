@@ -301,7 +301,7 @@ axes[1].text(
 )
 
 axes[0].annotate(
-    "37 % of beaches exhibit \nmore litter in spring \nthan in summer",
+    "36 % of beaches exhibit \nmore litter in spring \nthan in summer",
     xy=(0.67, 0.79),
     xytext=(0.78, 0.93),
     xycoords="axes fraction",
@@ -313,7 +313,7 @@ axes[0].annotate(
     arrowprops=dict(color=".5", arrowstyle="-", connectionstyle="arc3,rad=0.5"),
 )
 axes[1].annotate(
-    "For those beaches, litter \nis 112 % more abundant \nin spring than in summer",
+    "For those beaches, litter \nis 108 % more abundant \nin spring than in summer",
     xy=(0.67, 0.79),
     xytext=(0.78, 0.93),
     xycoords="axes fraction",

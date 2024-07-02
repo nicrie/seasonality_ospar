@@ -20,11 +20,13 @@ utils.styles.set_theme()
 YEAR = 2001
 QUANTITY = "absolute"
 VARIABLE = "Plastic"
-base_path = f"data/pca/{QUANTITY}/{VARIABLE}/{YEAR}/"
+base_path = f"data/clustering/pca/{QUANTITY}/{VARIABLE}/{YEAR}/"
 
 pca_result = xr.open_dataset(base_path + "pca_clustering.nc", engine="netcdf4")
 components = pca_result.comps
 pcs = pca_result.scores
+confidence = pca_result.confidence_pos
+effect_size = pca_result.effect_size_pos
 
 exp_var_ratio = pca_result.expvar_ratio_pos.quantile([0.5, 0.025, 0.975], "n") * 100
 mid1, low1, up1 = exp_var_ratio.sel(mode=1)
@@ -39,21 +41,14 @@ def trans_prob(c):
     return c
 
 
-# Effect size
-s = components.mean("n")
-s = abs(s).where(s >= 0)
-
-# Percentage of components above zero
-c = (components > 0).mean("n")
-
 # %%
 # Figure - PCA eigenvectors and projections
 # =============================================================================
-seasons = pca_result.season
+seasons = ["Winter", "Spring", "Summer", "Autumn"]
 extent = [-15, 13, 34, 64]
 proj = TransverseMercator(central_latitude=50)
 
-norm = mcolors.Normalize(vmin=0.5, vmax=0.8)
+norm = mcolors.Normalize(vmin=0.0, vmax=0.8)
 cmap = sns.color_palette("inferno", as_cmap=True)
 cmap_clrs = sns.color_palette("inferno", as_cmap=False, n_colors=4)
 clr_highlight = cmap_clrs[3]
@@ -80,8 +75,8 @@ for ax in [ax1, ax2]:
 ax1.scatter(
     components.lon,
     components.lat,
-    s=trans_effect_size(s.sel(mode=1)),
-    c=c.sel(mode=1).values,
+    s=trans_effect_size(effect_size.sel(mode=1)),
+    c=confidence.sel(mode=1).values,
     norm=norm,
     cmap=cmap,
     transform=PlateCarree(),
@@ -92,8 +87,8 @@ ax1.scatter(
 ax2.scatter(
     components.lon,
     components.lat,
-    s=trans_effect_size(s.sel(mode=2)),
-    c=c.sel(mode=2).values,
+    s=trans_effect_size(effect_size.sel(mode=2)),
+    c=confidence.sel(mode=2).values,
     norm=norm,
     cmap=cmap,
     transform=PlateCarree(),
@@ -105,10 +100,10 @@ ax2.scatter(
 cbar3 = fig.colorbar(
     mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
     cax=cax,
-    label="Principal components above zero",
+    label="Confidence in Cluster Membership",
 )
-cbar3.set_ticks([0.5, 0.6, 0.7, 0.8])
-cbar3.ax.set_yticklabels(["50%", "60%", "70%", "80%"])
+cbar3.set_ticks([0, 0.2, 0.4, 0.6, 0.8])
+cbar3.ax.set_yticklabels(["0%", "20%", "40%", "60%", "80%"])
 
 xticks = np.arange(0.0, 3.5)
 ax_pc1 = fig.add_axes([0.34, 0.2, 0.15, 0.08], facecolor=".1", frameon=False)
@@ -125,7 +120,7 @@ sns.barplot(
 )
 ax_pc1.set_title("PC$1^+$ scores", color="w", size=9)
 ax_pc1.set_xticks(xticks)
-ax_pc1.set_xticklabels(seasons, color="w", size=7)
+ax_pc1.set_xticklabels(seasons, color="w", size=5)
 
 ax_pc2 = fig.add_axes([0.73, 0.2, 0.15, 0.08], facecolor=".1", frameon=False)
 df_pcs2 = pcs.sel(mode=2, drop=True).to_dataframe().reset_index()
@@ -141,7 +136,7 @@ sns.barplot(
 )
 ax_pc2.set_title("PC$2^+$ scores", color="w", size=9)
 ax_pc2.set_xticks(xticks)
-ax_pc2.set_xticklabels(seasons, color="w", size=7)
+ax_pc2.set_xticklabels(seasons, color="w", size=5)
 
 ax_pc1.set_yticks([])
 ax_pc2.set_yticks([])
@@ -306,4 +301,6 @@ ax_expvar2.spines["top"].set_visible(False)
 ax_expvar2.spines["bottom"].set_visible(False)
 
 
-# plt.savefig("figs/figure03.png", dpi=300, bbox_inches="tight")
+plt.savefig("figs/figure03.png", dpi=500, bbox_inches="tight")
+
+# %%

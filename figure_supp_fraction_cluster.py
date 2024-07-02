@@ -26,21 +26,19 @@ def trans_prob(c):
 
 
 def load_data(path):
-    pca_result = xr.open_dataset(path + "pca_clustering.nc", engine="netcdf4")
-    components = pca_result.comps
+    try:
+        pca_result = xr.open_dataset(path + "pca_clustering.nc", engine="netcdf4")
+    except FileNotFoundError:
+        print(f"File not found: {path}")
+        return None
     pcs = pca_result.scores
+    confidence = pca_result.confidence_pos
+    effect_size = pca_result.effect_size_pos
 
-    quantiles = pca_result.expvar_ratio_pos.quantile([0.5, 0.025, 0.975], "n") * 100
-    mid1, low1, up1 = quantiles.sel(mode=1)
+    exp_var_ratio = pca_result.expvar_ratio_pos.quantile([0.5, 0.025, 0.975], "n") * 100
 
-    # Effect size
-    s = components.mean("n")
-    s = abs(s).where(s >= 0)
-
-    # Percentage of components above zero
-    c = (components > 0).mean("n")
     return xr.Dataset(
-        {"s": s, "c": c, "pcs": pcs, "quantiles": quantiles},
+        {"s": effect_size, "c": confidence, "pcs": pcs, "quantiles": exp_var_ratio},
     )
 
 
@@ -52,7 +50,7 @@ QUANTITY = "fraction"
 VARIABLE = ["LAND", "FISH", "AQUA"]
 NAMES = ["Land", "Fish", "Aquaculture"]
 
-paths = {v: f"data/pca/{QUANTITY}/{v}/{YEAR}/" for v in VARIABLE}
+paths = {v: f"data/clustering/pca/{QUANTITY}/{v}/{YEAR}/" for v in VARIABLE}
 ds = {v: load_data(p) for v, p in paths.items()}
 
 
@@ -63,8 +61,8 @@ seasons = ds["LAND"].season
 extent = [-15, 13, 34, 64]
 proj = TransverseMercator(central_latitude=50)
 
-max_probability = 0.60
-norm = mcolors.Normalize(vmin=0.5, vmax=max_probability)
+max_probability = 0.25
+norm = mcolors.Normalize(vmin=0.0, vmax=max_probability)
 cmap = sns.color_palette("inferno", as_cmap=True)
 cmap_clrs = sns.color_palette("inferno", as_cmap=False, n_colors=4)
 clr_highlight = cmap_clrs[3]
@@ -211,9 +209,9 @@ for i, (v, a) in enumerate(ax.items()):
 cbar = fig.colorbar(
     mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
     cax=cax,
-    label="Principal components above zero",
+    label="Confidence in Cluster Membership",
 )
-cticks = np.arange(0.5, max_probability + 0.01, 0.02)
+cticks = [0, 0.05, 0.1, 0.15, 0.2, 0.25]
 cbar.set_ticks(cticks)
 cbar.ax.set_yticklabels([f"{t:.0%}" for t in cticks])
 

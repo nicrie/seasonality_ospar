@@ -15,7 +15,7 @@ utils.styles.set_theme()
 
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
-VARIABLE = "Aquaculture"
+VARIABLE = "absolute/Plastic"
 YEAR = 2001
 
 base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
@@ -25,12 +25,11 @@ os.makedirs(fig_path, exist_ok=True)
 
 # %%
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-litter_o = ospar["preprocessed"].to_dataset()
-litter_o = litter_o[VARIABLE]
+litter_o = ospar["preprocessed/" + VARIABLE]
 litter_o = litter_o.sel(year=slice(YEAR, 2020)).dropna("beach_id", **{"how": "all"})
 
 model = dt.open_datatree(base_path + "posterior_predictive.zarr", engine="zarr")
-litter_m = model["posterior_predictive"][VARIABLE]
+litter_m = model["posterior_predictive"][VARIABLE.split("/")[1]]
 
 idata = {}
 for s in SEASONS:
@@ -172,7 +171,7 @@ for i, (season, id) in enumerate(idata.items()):
     sns.kdeplot(post.rho_1, ax=axes["rho_1"], **kwargs)
     sns.kdeplot(post.rho_2, ax=axes["rho_2"], **kwargs)
 
-axes["mu_mu"].set_xlim(0, 5)
+axes["mu_mu"].set_xlim(0, 1000)
 axes["phi"].set_xlim(0, 8)
 axes["eta_1"].set_xlim(0, 2)
 axes["eta_2"].set_xlim(0, 2)

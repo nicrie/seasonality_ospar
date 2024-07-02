@@ -22,7 +22,7 @@ from utils.styles import get_cyclic_palette
 
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
-VARIABLE = "absolute/Plastic"
+VARIABLE = "fraction/AQUA"
 YEAR = 2001
 
 

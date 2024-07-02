@@ -12,7 +12,7 @@ import pymc as pm
 import pytensor.tensor as pt
 import xarray as xr
 
-from utils.kernel import Matern32Haversine
+from utils.kernel import Matern32Chordal
 from utils.transformation import (
     estimate_lmbda,
     pt_yeojohnson_inv,
@@ -28,14 +28,15 @@ print("Loading data...")
 
 SEASON = ["DJF", "MAM", "JJA", "SON"]
 RANDOM_SEED = 2803 + 2
-VARIABLE = "absolute/AQUA"
+QUANTITY = "absolute"
+VARIABLE = "Plastic"
 YEAR = 2001
 
 
 rng = np.random.default_rng(RANDOM_SEED)
 
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-ospar = ospar["preprocessed/" + VARIABLE]
+ospar = ospar["/".join(["preprocessed", QUANTITY, VARIABLE])]
 ospar = ospar.sel(year=slice(YEAR, 2020))
 ospar = ospar.dropna("beach_id", **{"how": "all"})
 
@@ -111,8 +112,8 @@ def fit_gp_model(season, fit=True):
         eta_2 = pm.Gamma("eta_2", **params_eta)
         rho_1 = pm.InverseGamma("rho_1", **params_rho1)
         rho_2 = pm.InverseGamma("rho_2", **params_rho2)
-        kernel_short = eta_1**2 * Matern32Haversine(2, ls=rho_1)
-        kernel_long = eta_2**2 * Matern32Haversine(2, ls=rho_2)
+        kernel_short = eta_1**2 * Matern32Chordal(2, ls=rho_1)
+        kernel_long = eta_2**2 * Matern32Chordal(2, ls=rho_2)
         cov_func = kernel_short + kernel_long + pm.gp.cov.WhiteNoise(1e-4)
 
         # Latent GP for mean of NB distribution
@@ -315,7 +316,7 @@ gpr_pp = dt.DataTree.from_dict(
 # %%
 # Save GP model output
 # =============================================================================
-base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
+base_path = f"data/gpr/{QUANTITY}/{VARIABLE}/{YEAR}/"
 if not os.path.exists(base_path):
     os.makedirs(base_path)
 
@@ -323,3 +324,5 @@ for k, d in idata.items():
     d.to_netcdf(base_path + f"idata_{k}.nc")
 
 gpr_pp.to_zarr(base_path + "posterior_predictive.zarr")
+
+# %%

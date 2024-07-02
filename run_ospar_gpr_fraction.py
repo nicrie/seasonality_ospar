@@ -12,7 +12,7 @@ import pymc as pm
 import xarray as xr
 from scipy.special import expit, logit
 
-from utils.kernel import Matern32Haversine
+from utils.kernel import Matern32Chordal
 
 numpyro.set_host_device_count(4)
 
@@ -23,7 +23,7 @@ print("Loading data...")
 SEASON = ["DJF", "MAM", "JJA", "SON"]
 RANDOM_SEED = 2803 + 2
 QUANTITY = "fraction"
-VARIABLE = "AQUA"
+VARIABLE = "FISH"
 YEAR = 2001
 
 
@@ -117,8 +117,8 @@ def fit_gp_model(season, fit=True):
         eta_2 = pm.Gamma("eta_2", **params_eta)
         rho_1 = pm.InverseGamma("rho_1", **params_rho1)
         rho_2 = pm.InverseGamma("rho_2", **params_rho2)
-        kernel_short = eta_1**2 * Matern32Haversine(2, ls=rho_1)
-        kernel_long = eta_2**2 * Matern32Haversine(2, ls=rho_2)
+        kernel_short = eta_1**2 * Matern32Chordal(2, ls=rho_1)
+        kernel_long = eta_2**2 * Matern32Chordal(2, ls=rho_2)
         cov_func = kernel_short + kernel_long + pm.gp.cov.WhiteNoise(1e-4)
 
         # Latent GP

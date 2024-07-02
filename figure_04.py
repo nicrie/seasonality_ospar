@@ -17,16 +17,18 @@ utils.styles.set_theme()
 # =============================================================================
 COLORS = get_cyclic_palette(as_cmap=False, n_colors=4)
 SEASONS = ["DJF", "MAM", "JJA", "SON"]
+SEASON_LABELS = ["Winter", "Spring", "Summer", "Autumn"]
+QUANTITY = "absolute"
 VARIABLE = "Plastic"
 YEAR = 2001
 
-base_path = f"data/gpr/{VARIABLE}/{YEAR}/"
+base_path = f"data/gpr/{QUANTITY}/{VARIABLE}/{YEAR}/"
+pca_path = f"data/clustering/pca/{QUANTITY}/{VARIABLE}/{YEAR}/"
 
 # OSPAR data
 # -----------------------------------------------------------------------------
 ospar = dt.open_datatree("data/beach_litter/ospar/preprocessed.zarr", engine="zarr")
-litter_o = ospar["preprocessed"].to_dataset()
-litter_o = litter_o[VARIABLE]
+litter_o = ospar["/".join(["preprocessed", QUANTITY, VARIABLE])]
 litter_o = litter_o.sel(year=slice(YEAR, 2020)).dropna("beach_id", **{"how": "all"})
 
 # GPR data
@@ -39,7 +41,7 @@ litter_m = model["posterior_predictive"][VARIABLE]
 results = xr.open_dataset(base_path + "effect_size_seasons.nc")
 
 # Clusters of seasonality (PCA-based)
-pca_result = xr.open_dataset("data/pca/pca_beaches.nc", engine="netcdf4")
+pca_result = xr.open_dataset(pca_path + "/pca_clustering.nc", engine="netcdf4")
 expvar_pos = pca_result.expvar_ratio_pos
 components = pca_result.comps
 pcs = pca_result.scores
@@ -262,7 +264,7 @@ with plt.style.context(grey_style):
         for ax in [ax1, ax2]:
             ax.set_xlim(-0.5, 5)
             ax.set_xticks(xticks[:4])
-            ax.set_xticklabels(SEASONS, weight=700)
+            ax.set_xticklabels(SEASON_LABELS, weight=700)
             ax.set_yticks([0, 500, 1000, 1500, 2000])
             ax.set_ylim(0, 2000)
             # show y grid lines

@@ -12,3 +12,6 @@ The analysis for this work was entirely performed unsing Python 3.10. Ensure you
 conda env create -f environment.yml
 conda activate ospar_seasonality
 ```
+
+## Adittional Comments
+Due to size limitations on GitHub, some of the original data files (specifically data related to potential litter sources such as river discharge, fishing intensity, and exports) need to be downloaded from their respective data sources prior to the analysis. These data files are not provided directly in this repository. However, download scripts for some of these variables are included.

@@ -18,8 +18,8 @@ utils.styles.set_theme()
 # Load data
 # =============================================================================
 YEAR = 2001
-QUANTITY = "fraction"
-VARIABLE = "AQUA"
+QUANTITY = "absolute"
+VARIABLE = "Plastic"
 base_path = f"data/gpr/{QUANTITY}/{VARIABLE}/{YEAR}/"
 results = xr.open_dataset(base_path + "effect_size_seasons.nc")
 
@@ -224,7 +224,7 @@ ax.text(9, 57.5, "SK", **txt_kws)
 #         )
 #     )
 
-# fig.savefig("figs/figure01.png", dpi=300, bbox_inches="tight")
+fig.savefig("figs/figure01.png", dpi=300, bbox_inches="tight")
 
 
 # %%
