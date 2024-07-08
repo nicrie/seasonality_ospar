@@ -25,17 +25,38 @@ def trans_prob(c):
     return c
 
 
-def load_data(path):
+def load_data(path, sign="+"):
+    """Load PCA clustering results from a NetCDF file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the NetCDF file.
+    sign : str, optional
+        Sign of the cluster, by default "+".
+
+    """
     try:
         pca_result = xr.open_dataset(path + "pca_clustering.nc", engine="netcdf4")
     except FileNotFoundError:
         print(f"File not found: {path}")
         return None
-    pcs = pca_result.scores
-    confidence = pca_result.confidence_pos
-    effect_size = pca_result.effect_size_pos
-
-    exp_var_ratio = pca_result.expvar_ratio_pos.quantile([0.5, 0.025, 0.975], "n") * 100
+    if sign == "+":
+        pcs = pca_result.scores
+        confidence = pca_result.confidence_pos
+        effect_size = pca_result.effect_size_pos
+        exp_var_ratio = (
+            pca_result.expvar_ratio_pos.quantile([0.5, 0.025, 0.975], "n") * 100
+        )
+    elif sign == "-":
+        pcs = -pca_result.scores
+        confidence = pca_result.confidence_neg
+        effect_size = pca_result.effect_size_neg
+        exp_var_ratio = (
+            pca_result.expvar_ratio_neg.quantile([0.5, 0.025, 0.975], "n") * 100
+        )
+    else:
+        raise ValueError("Invalid sign")
 
     return xr.Dataset(
         {"s": effect_size, "c": confidence, "pcs": pcs, "quantiles": exp_var_ratio},
@@ -49,9 +70,9 @@ YEAR = 2001
 QUANTITY = "fraction"
 VARIABLE = ["LAND", "FISH", "AQUA"]
 NAMES = ["Land", "Fish", "Aquaculture"]
-
+signs = {"LAND": "+", "FISH": "+", "AQUA": "+"}
 paths = {v: f"data/clustering/pca/{QUANTITY}/{v}/{YEAR}/" for v in VARIABLE}
-ds = {v: load_data(p) for v, p in paths.items()}
+ds = {v: load_data(p, signs[v]) for v, p in paths.items()}
 
 
 # %%
