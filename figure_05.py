@@ -25,7 +25,9 @@ utils.styles.set_theme()
 # Load data
 # =============================================================================
 # Beach litter clusters
-pca_result = xr.open_dataset("data/pca/pca_beaches.nc", engine="netcdf4")
+pca_result = xr.open_dataset(
+    "data/clustering/pca/absolute/Plastic/2001/pca_clustering.nc", engine="netcdf4"
+)
 components = pca_result.comps
 pcs = pca_result.scores
 
@@ -95,7 +97,7 @@ plastic_stacked["mean_emission"] = plastic_stacked["size"]
 
 
 # Fishing (capture)
-fishing_capture = sources["fishing/capture/region"].to_dataset()
+fishing_capture = sources["fishing/region"].to_dataset()
 # fishing_capture = fishing_capture.where(nea_mask.mask(fishing_capture).notnull())
 
 fish_capture_cl1 = (
@@ -555,12 +557,6 @@ title = "Discharge [$10^{3}m^3/s$]"
 add_legend_circles(
     ax[1], 0.65, 0.01, 0.3, 0.2, sizes, labels, trans_discharge, title=title
 )
-# -> Fishing (capture)
-# sizes = np.array([30, 100, 300])
-# labels = ["30", "100", "300"]
-# title = "Fishing Intensity\n[$hrs/1º x 1º$]"
-# add_legend_circles(ax[3], 0.65, 0.01, 0.3, 0.2, sizes, labels, trans_wild, title=title)
-
 # -> Aquaculture (farm density)
 sizes = np.array([1, 3, 9])
 labels = ["1", "3", "9"]
