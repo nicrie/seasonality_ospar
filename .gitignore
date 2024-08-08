@@ -1,4 +1,5 @@
 **/__pycache__/
+*cpython*
 
 # VS Code #
 *code-workspace
@@ -17,26 +18,74 @@
 # Geocache #
 utils/.api_key*
 
-# Ignore some data directories and big files
-data/bayesian_analysis
-data/land_sea_mask
-data/beach_litter/emodnet
-data/economic/aquaculture/**
-data/physical/**
-data/physical/river/lebreton2017
-data/physical/river/meijer2021
-data/**/*.zarr
-data/**/*.nc
-data/**/*.zip
-data/economic/exports/eumofa/*
-data/economic/first_sales/*
-data/economic/production/Aquaculture_2023.1.1/**
-data/economic/production/Capture_2023.1.1/**
+# Ignore all scripts & data files
+**/*.py
+**/*.ipynb
+**/*.json
+**/*.xlsx
+**/*.csv
+data/**/*
+figs/**/*
 
+# But not these data ....
+# Beach Litter Surveys
+!data/beach_litter/ospar/single/*.csv
+!data/beach_litter/ospar/OSPAR_meta_litter_categories.xlsx
+!data/beach_litter/ospar/remarks.csv
+# Utilities
+!utils/categories.json
+!utils/definitions.py
+!utils/kernel.py
+!utils/transformation.py
+!utils/statistics.py
+!utils/styles.py
 
+# Strokal et al. 2023
+!data/physical/river/strokal2023/main_model_outputs.ods
+!data/physical/river/strokal2023/readme_general.txt
+!data/physical/river/strokal2023_efas_v5_weights.nc
+# Ocean Wave Height Reanalysis
+!data/physical/wave_height/wave_climatology.nc
+# Mariculture locations
+!data/economic/aquaculture/mariculture/all_marine_aquaculture_farms_sources_final.csv
+!data/economic/aquaculture/mariculture_seasonality.py
+# FAO Fish Production in NEA countries
+!data/economic/production/fao_fish_production.nc
+!data/economic/production/conversion_table_species_fao_to_eumofa.csv
+# EUMOFA Export data
+!data/economic/exports/exports_nea_countries.nc
+# Icons for Figures
+!figs/icons/sources/png/*.png
 
+# and these scripts ....
+!download_cmems_wave_height.py
+!create_species_conversion_dict_fao_eumofa.py
+!preprocess_ospar.py
+!preprocess_river_efas_v5.py
+!preprocess_river_strokal.py
+!preprocess_fishing_capture.py
+!preprocess_wave_height.py
+!preprocess_exports.py
+!preprocess_fao.py
+!preprocess_mariculture.py
+!preprocess_mariculture_seasonality.py
+
+!run_ospar_gpr.py
+!run_ospar_gpr_fraction.py
+
+!postprocess_models.py
+
+!perform_clustering_pca.py
+
+!figure_0*.py
+
+# ... even if they are in subdirectories
+!*/
 
 archive
-figs
 presentation
+
+
+
+
 
