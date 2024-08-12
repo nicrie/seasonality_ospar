@@ -14,13 +14,13 @@ conda activate ospar_seasonality
 ```
 
 ## 2. Obtain the Data
-Please note: Due to the large size of some source data files, not all original data is provided within this repository. In such cases, we have made the post-processed data files available either within this repository or through an associated data repository hosted on [figshare](https://doi.org/10.6084/m9.figshare.26155156).
+Please note: Due to the large size of some source data files, not all original data is provided within this repository. In such cases, we have made the post-processed data files available either within this repository or through an associated data repository hosted on [figshare](https://figshare.com/s/81df0e05e123e1577ded).
 
 ### Beach Litter Surveys
 Source data is available in this repository at [`data/beach_litter/ospar/single/`](`data/beach_litter/ospar/single/`). Alternatively, OSPAR commission surveys can be downloaded as `.csv` files from [here](https://beachlitter.ospar.org/survey/export). 
 
 ### EFAS River Discharge
-River discharge data for the European Flood Awareness System (EFAS) is provided by the Copernicus Climate Data Store (CDS) (https://doi.org/10.24381/cds.9f696a7a). We use version 5 of the dataset, covering 2010-2020 (approximately 873 GB). We provide a script for preprocessing the monthly files and a preprocessed data file on [figshare](https://doi.org/10.6084/m9.figshare.26155156).
+River discharge data for the European Flood Awareness System (EFAS) is provided by the Copernicus Climate Data Store (CDS) (https://doi.org/10.24381/cds.9f696a7a). We use version 5 of the dataset, covering 2010-2020 (approximately 873 GB). We provide a script for preprocessing the monthly files and a preprocessed data file on [figshare](https://figshare.com/s/81df0e05e123e1577ded).
 
 ### Riverine Plastic Emissions
 Source data is available at [`data/physical/river/strokal2023/`](data/physical/river/strokal2023/). The original data for riverine plastic emissions can be obtained from Strokal et al. ([2023](https://doi.org/10.1038/s41467-023-40501-9)).
@@ -82,7 +82,7 @@ Preprocess riverine plastic emissions:
 python preprocess_river_strokal.py
 ```
 
-> **_NOTE:_**  For seasonal scaling, donload `data/physical/river/efas_v5_discharge.nc` from the associated [figshare repository](https://doi.org/10.6084/m9.figshare.26155156).
+> **_NOTE:_**  For seasonal scaling, donload `data/physical/river/efas_v5_discharge.nc` from the associated [figshare repository](https://figshare.com/s/81df0e05e123e1577ded).
 
 
 ### Fishing Intensity
@@ -153,7 +153,7 @@ Perform a similar GP regression for the fraction of items related to land, aquac
 python run_ospar_gpr_fraction.py
 ```
 
-> **_NOTE:_**  This analysis requires sufficient memory (RAM) to run. Consider using HPC facilities. Results are available from the associated [figshare repository](https://doi.org/10.6084/m9.figshare.26155156).
+> **_NOTE:_**  This analysis requires sufficient memory (RAM) to run. Consider using HPC facilities. Results are available from the associated [figshare repository](https://figshare.com/s/81df0e05e123e1577ded).
 
 Once you have the results (posterior probability distributions), either by running the scripts or by downloading the results from figshare, you can post-process the results to compute relevant statistical quantities such as effect size and confidence. Use the following script, setting the `VARIABLE` accordingly:
 
