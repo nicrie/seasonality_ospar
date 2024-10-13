@@ -58,6 +58,7 @@ figs/**/*
 !figs/icons/sources/png/*.png
 
 # and these scripts ....
+!analyze_river_discharge.ipynb
 !download_cmems_wave_height.py
 !create_species_conversion_dict_fao_eumofa.py
 !preprocess_ospar.py
