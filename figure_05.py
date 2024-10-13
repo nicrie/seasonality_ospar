@@ -10,13 +10,12 @@ import numpy as np
 import pandas as pd
 import PIL
 import seaborn as sns
+import utils.styles
 import xarray as xr
 from datatree import open_datatree
 from matplotlib import colormaps
 from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Polygon
-
-import utils.styles
 from utils.definitions import nea_ocean_basins
 
 utils.styles.set_theme()
@@ -46,11 +45,10 @@ def trans_prob(c):
 
 
 # Effect size
-s = components.mean("n")
-s = abs(s).where(s >= 0)
+s = pca_result.effect_size_pos
 
 # Percentage of components above zero
-c = (components > 0).mean("n")
+c = pca_result.confidence_pos
 
 litter_cl1 = pd.DataFrame(
     {
@@ -245,7 +243,7 @@ for a in [ax[0], ax[2], ax[4]]:
     a.scatter(
         litter_cl1.lon,
         litter_cl1.lat,
-        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.60),
+        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.30),
         color="None",
         ec="#ea60ff",
         lw=0.75,
@@ -256,7 +254,7 @@ for a in [ax[1], ax[3], ax[5]]:
     a.scatter(
         litter_cl2.lon,
         litter_cl2.lat,
-        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.60),
+        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.30),
         color="None",
         ec="#ea60ff",
         lw=0.75,
@@ -641,7 +639,7 @@ for a in [ax[0], ax[2], ax[4]]:
     a.scatter(
         litter_cl1.lon,
         litter_cl1.lat,
-        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.60),
+        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.30),
         color="None",
         ec="#ea60ff",
         lw=0.75,
@@ -652,7 +650,7 @@ for a in [ax[1], ax[3], ax[5]]:
     a.scatter(
         litter_cl2.lon,
         litter_cl2.lat,
-        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.60),
+        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.30),
         color="None",
         ec="#ea60ff",
         lw=0.75,
@@ -798,7 +796,7 @@ for a in [ax[0], ax[2], ax[4]]:
     a.scatter(
         litter_cl1.lon,
         litter_cl1.lat,
-        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.60),
+        s=litter_cl1["size"].where(litter_cl1["probability"] > 0.30),
         color="None",
         ec="#ea60ff",
         lw=0.75,
@@ -809,7 +807,7 @@ for a in [ax[1], ax[3], ax[5]]:
     a.scatter(
         litter_cl2.lon,
         litter_cl2.lat,
-        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.60),
+        s=litter_cl2["size"].where(litter_cl2["probability"] > 0.30),
         color="None",
         ec="#ea60ff",
         lw=0.75,
