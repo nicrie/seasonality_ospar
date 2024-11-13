@@ -26,6 +26,7 @@ utils/.api_key*
 **/*.csv
 data/**/*
 figs/**/*
+graphical_abstract/**/*
 
 # But not these data ....
 # Beach Litter Surveys
