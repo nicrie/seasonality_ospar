@@ -38,7 +38,7 @@ def trans_effect_size(x):
 
 markersize = trans_effect_size(eff_size)
 colors = results.max_hdi.max("combination")
-is_above_94 = colors > 0.94
+is_above_95 = colors > 0.95
 
 vmin = 0.5
 vmax = 1
@@ -64,7 +64,7 @@ ax = fig.add_subplot(gs[:, :], projection=proj)
 for i in np.argsort(colors).values:
     ec = "w"
     lw = 0.5
-    if is_above_94[i]:
+    if is_above_95[i]:
         ec = "C3"
         lw = 2
 
@@ -238,7 +238,7 @@ markersize = np.where(results.pvals_kruskal_wallis.notnull(), markersize, np.nan
 
 colors = results.pvals_cr_mann_whitney.min("combination")
 colors = 1 - colors
-is_above_94 = colors > 0.95
+is_above_95 = colors > 0.95
 
 vmin = 0.5
 vmax = 1
@@ -266,7 +266,7 @@ for i in np.argsort(colors).values:
     marker = "o"
     s = markersize[i]
     c = colors[i]
-    if is_above_94[i]:
+    if is_above_95[i]:
         ec = "C3"
         lw = 2
 
